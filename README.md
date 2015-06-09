@@ -8,7 +8,7 @@ This is my update for Scilab development.
 ## Xcos Automatic Layout
 A project in GSoC 2015.
 
-## Schedule:
+### Schedule:
 1. Literature survey about automatic layout (05.25-05.31): 
 2. Getting started with JGraphX (06.01-06.07): 
 3. Understanding how Xcos uses JGraphX (06.08-06.14): 
@@ -18,7 +18,7 @@ A project in GSoC 2015.
 7. Integration and testing (10th - 11th Weeks): 
 8. Final (12th Week)
 
-## Weekly report
+### Weekly report
 1. Week01(05.25-05.31): Preparation and Literature survey.
 2. Week02(06.01-06.07): Literature research and JGraphX research.
 3. Week03(06.08-06.14): 
