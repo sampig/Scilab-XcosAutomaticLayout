@@ -1,0 +1,145 @@
+Improving Modeling Usability: Automatic Layouting for Simulink
+=====
+
+[link](http://de.mathworks.com/videos/improving-modeling-usability-automatic-layouting-for-simulink-93139.html)
+
+
+
+## Introduction and Motivation
+
+1. A models readability depends on its layout:
+    - Understandability
+    - Maintainability
+    - Reusability
+2. Research and experience shows that up to 30% of modeling time in Simulink is spent on layout improvements:
+    - Rearranging blocks
+    - Rerouting lines
+3. No proper automatic layout generation support is available for Simulink models.
+    - Simple block arrangement / distribution functions are available.
+
+
+
+## Method and Implementation
+
+### Automatic Layout Generation using an Improved Sugiyama Algorithm
+
+The 4-Step algorithm for layered graphs:
+
+1. Feedback handling with user preferences
+2. Hierarchisation with optional alignment
+3. Barycenter crossing reduction with support for port constraints
+4. Coordinate assignment with support for variable sized blocks and user preferences:
+    - uses (integer) linear constraint solving to optimize block positions and sizes towards optimal edge straightness and minimal model size.
+    - builds on a scaled, linearized block size / port position model.
+
+### Interfacing with Simulink A Layout Server
+
+1. External Layout Server
+    - Contains layout algorightms
+    - Processes layout requests
+2. Simulink M Scripts
+    - Generate Layout Requests
+    - Decode Layout Results
+    - Update model
+3. Layout Requests / Results
+    - XML encoded
+    - Transferred via TCP socket
+    - Contain old / new layout information
+
+
+
+## Use Cases and Usability Enhancements
+
+### Modeling Challenges - Building new Functionality
+
+1. New Functionality is created within a subsystem.
+    - Blocks are added from the libraries.
+    - Connetions are drawn.
+2. Regular Layout Adjustments are required to establish and preserve the models descriptive quality.
+    - Block positions and sizes are adjusted
+    - Lines are rerouted
+3. Rudimentary support is provided by recent improvements
+    - Block alignment and distribution
+
+
+### Modeling Challenges - Inserting Ports at BusCreator Blocks
+
+1. A new Signal needs to be added to a Bus.
+    - Additional status information
+    - Functionality is to be added
+2. Signals in buses are often grouped by their position in the bus
+    - For flat hierarchies
+    - Relating signals are placed adjacent
+3. Inserting signals is not supported natively
+    - Adding at the last position is supported
+    - Moving the new port to the desired position is time-consuming
+    - Layout needs adjustments afterwards
+
+
+### Modeling Challenges - Breaking-up SubSystems
+
+1. A models subsystem structure needs to be overhauled.
+    - Functional optimization
+    - Model refactoring
+2. Existing subsystems need to be broken-up.
+    - Subsystem creation is supported with limited layout capabilities
+    - Breaking-up a subsystem requires manual cut, paste, connect, delete operations
+3. A new layout needs to be generated afterwards.
+
+
+
+## Technical Issues and Solutions
+
+### Dynamic Context Menu
+
+1. Restriction
+    - The Simulink customization API for context menu extensions does not support arguments for action or container functions:
+        ``` schema.childrenFcns(i) = @fcn() ```
+2. Requirement
+    - Additional arguments are required for some functions, e.g. "Insert new port at position n".
+3. Solution
+    - Dynamically generated anonymous wrapper functions hide arugments from the API:
+
+
+### Simulink Challenges
+
+1. Nonlinear block size / port position relationship
+    - Distance between ports is linear dependent on the block size
+    - First port offset is not linear dependent on the block size
+2. Layout and structure of a mode are not strictly separated
+    - Line split points are not interchangeable, as lines are represented as connected segments
+    - Line drawing and block positioning can lead to accidental connections
+3. Other Issues
+    - Interface for port positions returns imprecise positions
+
+
+
+## Perspective
+
+1. Support for Stateflow diagrams
+    - Different algorithmic approach required
+2. Tighter Coupled Interface to Simulink
+    - To avoid performance issues for larger models
+    - Probably direct integrations of automatic layout generation support into Simulink
+3. View Management
+    - Strictly separated view and structure
+    - Situational points of view
+        * Show /Hide debugging components
+        * Show signal flows
+
+
+
+## Summary
+
+1. Manual layout generation is a time-consuming task
+    - A necessary investment in a models quality
+2. Automatic layout generation for Simulink is possible
+    - A specially tailored layout algorithm has been introduced
+    - Prototypical implementation proves feasibility
+3. Modeling usability enhancements
+    - Automatic layout generation makes usability enhancements possible
+    - Exernplary usability enhancements give a first glance on the potential of enhancement functions
+4. A significant productivity improvement can be expected
+
+
+
