@@ -5,8 +5,8 @@ Scilab Contributor: [ZHU, Chenfeng](http://about.me/zhuchenfeng)
 
 This is my update for Scilab development.
 
-## Xcos Automatic Layout
-A project in GSoC 2015.
+## [Xcos Automatic Layout](http://wiki.scilab.org/Contributor%20-%20Xcos%20automatic%20layout)
+A project in [GSoC 2015](https://www.google-melange.com/gsoc/homepage/google/gsoc2015).
 
 ### Schedule:
 1. Literature survey about automatic layout (05.25-05.31): 
