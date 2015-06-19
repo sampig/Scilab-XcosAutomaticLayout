@@ -3,15 +3,15 @@
         filemode = true
         bare = false
         logallrefupdates = true
+        pager =
+        editor = nano
 [remote "origin"]
         url = ssh://zhuchenf@git.scilab.org:29418/scilab.git
         fetch = +refs/heads/*:refs/remotes/origin/*
         push = xcos-layout:refs/for/xcos-layout
-[branch "master"]
-        remote = origin
-        merge = refs/heads/master
 [branch "xcos-layout"]
-                remote = origin
+        remote = origin
+        merge = refs/heads/xcos-layout
 [xmlindent]
         ignored = scilab/Visual-Studio-settings/*.xml
         ignored = scilab/checkstyle/*.xml
@@ -32,3 +32,5 @@
         ignored = scilab/modules/scinotes/src/java/org/scilab/modules/scinotes/MatchingBlockScanner.java
         ignored = scilab/modules/scinotes/src/java/org/scilab/modules/scinotes/ScilabLexer.java
         ignored = scilab/modules/scicos/src/scicos_sundials/*
+[color]
+        ui = true
