@@ -21,6 +21,10 @@ A project in [GSoC 2015](https://www.google-melange.com/gsoc/homepage/google/gso
 ### Weekly report
 1. Week01(05.25-05.31): Preparation and Literature survey.
 2. Week02(06.01-06.07): Literature research and JGraphX research.
-3. Week03(06.08-06.14): 
-
+3. Week03(06.08-06.14): Functionality Confirmation and Demo Development.
+4. Week04(06.15-06.21): Demo (Click to find an Optimal Route) Development and Xcos Research.
+5. Week05(06.22-06.28): Commit 1st Functionality and Demo (Automatic Order) Development.
+6. Week06(06.29-07.05): Demo (Automatic Order) Development
+7. Week07(07.06-07.12): Demo (Automatic Order) Development and Commit 2nd Functionality
+8. Week08(07.13-07.19): 
 
