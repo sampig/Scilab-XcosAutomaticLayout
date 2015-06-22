@@ -3,6 +3,7 @@ package org.zhuchenf.demo;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -24,8 +25,6 @@ public class ChangeAction extends AbstractAction {
     private static final long serialVersionUID = 7661628580051142609L;
 
     private ScilabGraph graph;
-
-    // private List<mxPoint> listPath = new ArrayList<>(0);
 
     public ChangeAction() {
         super();
@@ -124,7 +123,7 @@ public class ChangeAction extends AbstractAction {
                     System.out.println("Optimal is Straight.");
                 } else if (list.size() == 0) {
                     // if no optimal route is found, keep the original one.
-                    ;
+                    System.out.println("No optimal");
                 } else {
                     geometry.setPoints(list);
                     ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
@@ -169,14 +168,133 @@ public class ChangeAction extends AbstractAction {
                 && !checkObstacle(srcp1, tgtp1, allCells)) {
             return null;
         }
+        listPath.clear();
+        System.out.println(pathValue(srcp1, tgtp1, new mxPoint((srcx + srcp1.getX()) / 2,
+                (srcy + srcp1.getY()) / 2), allCells));
         listPoints.add(srcp1);
+        Collections.reverse(listPath);
+        listPoints.addAll(listPath);
         listPoints.add(tgtp1);
         return listPoints;
     }
 
-    public void check(mxPoint p1, mxPoint p2) {
+    public void check(mxPoint p1, mxPoint p2, mxPoint next) {
         // point1 and point2 are not in the vertical or horizontal line.
-        
+    }
+
+    private List<mxPoint> listPath = new ArrayList<>(0);
+    private int vTurning = 200;
+    private int bound = 1000;
+
+    public int pathValue(mxPoint current, mxPoint target, mxPoint last, Object[] allCells) {
+        double step = MyConstants.BEAUTY_DISTANCE;
+        int value = (int) step;
+        int vEast = 0; // value in east direction
+        int vSouth = 0;// value in south direction
+        int vWest = 0;// value in west direction
+        int vNorth = 0;// value in north direction
+        mxPoint next = new mxPoint(current);
+        double x1 = current.getX();
+        double y1 = current.getY();
+        double x2 = target.getX();
+        double y2 = target.getY();
+        double x3 = last.getX();
+        double y3 = last.getY();
+        double dx = current.getX() - last.getX();
+        double dy = current.getY() - last.getY();
+        // if it goes out of bounds, it will be a dead route.
+        if (x1 > bound || y1 > bound || x1 < 0 || y1 < 0) {
+            return Integer.MAX_VALUE;
+        }
+        // if there is a block, it will be a dead route.
+        if (checkObstacle(last, current, allCells)) {
+            return Integer.MAX_VALUE;
+        }
+        // if it can "see" the target, get this point.
+        if (x1 == x2 || y1 == y2) {
+            if (!checkObstacle(current, target, allCells)) {
+                listPath.add(current);
+                return 0;
+            }
+        }
+        if (x1 != x2 && y1 != y2) {
+            if (Math.abs(x1 - x2) == (Math.abs(x1 - x3) + Math.abs(x3 - x2))) {
+                if (!checkObstacle(new mxPoint(x2, y1), target, allCells)) {
+                    listPath.add(new mxPoint(x2, y1));
+                    return 0;
+                }
+            }
+            if (Math.abs(y1 - y2) == (Math.abs(y1 - y3) + Math.abs(y3 - y2))) {
+                if (!checkObstacle(new mxPoint(x1, y2), target, allCells)) {
+                    listPath.add(new mxPoint(x1, y2));
+                    return 0;
+                }
+            }
+        }
+        // it will never go back. And it takes more effort to turn.
+        if (dx >= 0 && dy == 0) { // EAST→
+            vWest = Integer.MAX_VALUE;
+            vSouth = vTurning;
+            vNorth = vTurning;
+        } else if (dx == 0 && dy > 0) { // SOUTH↓
+            vNorth = Integer.MAX_VALUE;
+            vEast = vTurning;
+            vWest = vTurning;
+        } else if (dx < 0 && dy == 0) { // WEST←
+            vEast = Integer.MAX_VALUE;
+            vSouth = vTurning;
+            vNorth = vTurning;
+        } else if (dx == 0 && dy < 0) { // NORHT↑
+            vSouth = Integer.MAX_VALUE;
+            vEast = vTurning;
+            vWest = vTurning;
+        }
+        if (vEast < Integer.MAX_VALUE) {
+            vEast += pathValue(new mxPoint(x1 + step, y1), target, current, allCells);
+        }
+        if (vSouth < Integer.MAX_VALUE) {
+            vSouth += pathValue(new mxPoint(x1, y1 + step), target, current, allCells);
+        }
+        if (vWest < Integer.MAX_VALUE) {
+            vWest += pathValue(new mxPoint(x1 - step, y1), target, current, allCells);
+        }
+        if (vNorth < Integer.MAX_VALUE) {
+            vNorth += pathValue(new mxPoint(x1, y1 - step), target, current, allCells);
+        }
+        if (vEast <= vSouth && vEast <= vWest && vEast <= vNorth) {
+            next.setX(x1 + step);
+            value += vEast;
+        } else if (vSouth <= vEast && vSouth <= vWest && vSouth <= vNorth) {
+            next.setY(y1 + step);
+            value += vSouth;
+        } else if (vWest <= vEast && vWest <= vSouth && vWest <= vNorth) {
+            next.setX(x1 - step);
+            value += vWest;
+        } else if (vNorth <= vEast && vNorth <= vSouth && vNorth <= vWest) {
+            next.setY(y1 - step);
+            value += vNorth;
+        }
+        listPath.add(next);
+        return value;
+    }
+
+    public double distance(mxPoint p1, mxPoint p2) {
+        double x1 = p1.getX();
+        double y1 = p1.getY();
+        double x2 = p2.getX();
+        double y2 = p2.getY();
+        double d = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        return d;
+    }
+
+    public boolean isInLine(double x1, double y1, double x2, double y2, double x3, double y3) {
+        double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
+        double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
+        if (l13 == (l12 + l23)) {
+            return true;
+        }
+        return false;
     }
 
     /**
