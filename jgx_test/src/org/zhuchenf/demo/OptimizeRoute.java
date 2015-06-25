@@ -44,7 +44,7 @@ public class OptimizeRoute extends JFrame {
     private List<Object> listVertex = new ArrayList<>(0);
 
     public OptimizeRoute() {
-        super("Test2Block");
+        super("OptimizeRoute");
 
         graph = new ScilabGraph();
         Object parent = graph.getDefaultParent();

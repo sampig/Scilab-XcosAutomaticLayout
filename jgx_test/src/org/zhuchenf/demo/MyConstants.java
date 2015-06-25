@@ -8,19 +8,19 @@ public class MyConstants {
     public final static int POSITION_UP = 4;
 
     public enum MyOrientation {
-        RIGHT, DOWN, LEFT, UP;
+        EAST, SOUTH, WEST, NORTH;
 
         public static boolean isOpposite(MyOrientation o1, MyOrientation o2) {
-            if (o1 == RIGHT && o2 == LEFT) {
+            if (o1 == EAST && o2 == WEST) {
                 return true;
             }
-            if (o1 == DOWN && o2 == UP) {
+            if (o1 == SOUTH && o2 == NORTH) {
                 return true;
             }
-            if (o1 == LEFT && o2 == RIGHT) {
+            if (o1 == WEST && o2 == EAST) {
                 return true;
             }
-            if (o1 == UP && o2 == DOWN) {
+            if (o1 == NORTH && o2 == SOUTH) {
                 return true;
             }
             return false;
@@ -28,32 +28,32 @@ public class MyConstants {
 
         public MyOrientation getOppositeOrientation() {
             switch (this) {
-            case RIGHT:
-                return LEFT;
-            case LEFT:
-                return RIGHT;
-            case DOWN:
-                return UP;
-            case UP:
-                return DOWN;
+            case EAST:
+                return WEST;
+            case WEST:
+                return EAST;
+            case SOUTH:
+                return NORTH;
+            case NORTH:
+                return SOUTH;
             }
-            return LEFT;
+            return WEST;
         }
 
         public MyOrientation[] getDifferentOrientation() {
             MyOrientation[] o = new MyOrientation[3];
             switch (this) {
-            case RIGHT:
-                o = new MyOrientation[] { DOWN, LEFT, UP };
+            case EAST:
+                o = new MyOrientation[] { SOUTH, WEST, NORTH };
                 break;
-            case LEFT:
-                o = new MyOrientation[] { RIGHT, DOWN, UP };
+            case WEST:
+                o = new MyOrientation[] { EAST, SOUTH, NORTH };
                 break;
-            case DOWN:
-                o = new MyOrientation[] { RIGHT, LEFT, UP };
+            case SOUTH:
+                o = new MyOrientation[] { EAST, WEST, NORTH };
                 break;
-            case UP:
-                o = new MyOrientation[] { RIGHT, DOWN, LEFT };
+            case NORTH:
+                o = new MyOrientation[] { EAST, SOUTH, WEST };
                 break;
             }
             return o;
@@ -62,17 +62,17 @@ public class MyConstants {
         public MyOrientation[] changeOrientation() {
             MyOrientation[] o = new MyOrientation[3];
             switch (this) {
-            case RIGHT:
-                o = new MyOrientation[] { DOWN, UP };
+            case EAST:
+                o = new MyOrientation[] { SOUTH, NORTH };
                 break;
-            case LEFT:
-                o = new MyOrientation[] { DOWN, UP };
+            case WEST:
+                o = new MyOrientation[] { SOUTH, NORTH };
                 break;
-            case DOWN:
-                o = new MyOrientation[] { RIGHT, LEFT };
+            case SOUTH:
+                o = new MyOrientation[] { EAST, WEST };
                 break;
-            case UP:
-                o = new MyOrientation[] { RIGHT, LEFT };
+            case NORTH:
+                o = new MyOrientation[] { EAST, WEST };
                 break;
             }
             return o;

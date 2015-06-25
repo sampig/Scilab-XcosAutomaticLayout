@@ -3,7 +3,6 @@ package org.zhuchenf.demo;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -26,6 +25,8 @@ public class ChangeAction extends AbstractAction {
 
     private ScilabGraph graph;
 
+    private List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
+
     public ChangeAction() {
         super();
     }
@@ -45,7 +46,12 @@ public class ChangeAction extends AbstractAction {
             } else if ("Horizontal".equalsIgnoreCase(name)) {
                 this.updateLinkHorizontal(cells);
             } else if ("Optimal".equalsIgnoreCase(name)) {
-                this.updateLinkOptimal(cells);
+                graph.getModel().beginUpdate();
+                try {
+                    this.updateLinkOptimal(cells);
+                } finally {
+                    graph.getModel().endUpdate();
+                }
             }
         }
     }
@@ -82,11 +88,13 @@ public class ChangeAction extends AbstractAction {
     }
 
     public void updateLinkOptimal(Object[] cells) {
+        Object[] all = graph.getChildCells(graph.getDefaultParent());
+        // graph.getChildVertices(graph.getDefaultParent());
         for (Object o : cells) {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
                 if (c.isEdge()) {
-                    this.updateRoute(c, graph);
+                    this.updateRoute(c, all, graph);
                 }
             }
         }
@@ -98,38 +106,30 @@ public class ChangeAction extends AbstractAction {
      * @param cell
      * @param graph
      */
-    protected void updateRoute(mxCell cell, ScilabGraph graph) {
-        Object[] all = graph.getChildCells(graph.getDefaultParent());
+    protected void updateRoute(mxCell cell, Object[] all, ScilabGraph graph) {
         mxICell src = cell.getSource();
         mxICell tgt = cell.getTarget();
-        all = removeMyself(all, cell, src, tgt);
+        Object[] allOtherCells = getAllOtherCells(all, cell, src, tgt);
         if (src != null && tgt != null) {
-            System.out.println("All other cells: " + all.length);
+            System.out.println("All other vertices: " + allOtherCells.length);
             System.out.println("Change the edge.");
-            graph.getModel().beginUpdate();
-            try {
-                // graph.setCellStyle(getPath(cell,all), new Object[] {cell});
-                mxGeometry geometry = new mxGeometry();
-                List<mxPoint> list = getTurningPoints(cell, all);
-                if (list == null) {
-                    graph.setCellStyle("", new Object[] { cell });
-                    // graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1",
-                    // new Object[] { cell });
-                    graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW,
-                            new Object[] { cell });
-                    graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL,
-                            new Object[] { cell });
-                    graph.resetEdge(cell);
-                    System.out.println("Optimal is Straight.");
-                } else if (list.size() == 0) {
-                    // if no optimal route is found, keep the original one.
-                    System.out.println("No optimal");
-                } else {
-                    geometry.setPoints(list);
-                    ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
-                }
-            } finally {
-                graph.getModel().endUpdate();
+            // graph.setCellStyle(getPath(cell,all), new Object[] {cell});
+            mxGeometry geometry = new mxGeometry();
+            boolean flag = computeRoute(cell, allOtherCells);
+            if (flag) {
+                geometry.setPoints(listRoute);
+                ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
+            } else {
+                System.out.println("No optimal");
+                graph.setCellStyle("", new Object[] { cell });
+                // graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1",
+                // new Object[] { cell });
+                graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW,
+                        new Object[] { cell });
+                graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL,
+                        new Object[] { cell });
+                graph.resetEdge(cell);
+                System.out.println("Optimal is Straight.");
             }
         }
     }
@@ -142,8 +142,8 @@ public class ChangeAction extends AbstractAction {
      * @param allCells
      * @return list of turning points
      */
-    public List<mxPoint> getTurningPoints(mxCell cell, Object[] allCells) {
-        List<mxPoint> listPoints = new ArrayList<>(0);
+    public boolean computeRoute(mxCell cell, Object[] allCells) {
+        listRoute.clear();
         mxICell src = cell.getSource();
         mxICell tgt = cell.getTarget();
         // mxGeometry cg = cell.getGeometry();
@@ -166,20 +166,24 @@ public class ChangeAction extends AbstractAction {
         // use straight route.
         if ((!checkOblique(srcp, tgtp) || !checkOblique(srcp1, tgtp1))
                 && !checkObstacle(srcp1, tgtp1, allCells)) {
-            return null;
+            return true;
         }
-        listPath.clear();
-        System.out.println(pathValue(srcp1, tgtp1, new mxPoint((srcx + srcp1.getX()) / 2,
-                (srcy + srcp1.getY()) / 2), allCells));
-        listPoints.add(srcp1);
-        Collections.reverse(listPath);
-        listPoints.addAll(listPath);
-        listPoints.add(tgtp1);
-        return listPoints;
+        // listPath.clear();
+        // System.out.println(pathValue(srcp1, tgtp1, new mxPoint((srcx +
+        // srcp1.getX()) / 2,
+        // (srcy + srcp1.getY()) / 2), allCells));
+        listRoute.add(srcp1);
+        // Collections.reverse(listPath);
+        // listRoute.addAll(listPath);
+        listRoute.add(tgtp1);
+        return true;
     }
 
-    public void check(mxPoint p1, mxPoint p2, mxPoint next) {
+    public List<mxPoint> check(mxPoint p1, mxPoint p2) {
         // point1 and point2 are not in the vertical or horizontal line.
+        List<mxPoint> list = new ArrayList<>(0);
+
+        return list;
     }
 
     private List<mxPoint> listPath = new ArrayList<>(0);
@@ -322,16 +326,16 @@ public class ChangeAction extends AbstractAction {
     public void getPointAwayPort(mxPoint point, mxICell port) {
         double away = MyConstants.SLOPE_ERROR;
         switch (getRelativeOrientation(port)) {
-        case RIGHT:
+        case EAST:
             point.setX(point.getX() + away);
             break;
-        case DOWN:
+        case SOUTH:
             point.setY(point.getY() - away);
             break;
-        case LEFT:
+        case WEST:
             point.setX(point.getX() - away);
             break;
-        case UP:
+        case NORTH:
             point.setY(point.getY() + away);
             break;
         }
@@ -345,17 +349,30 @@ public class ChangeAction extends AbstractAction {
      * @return MyOrientation
      */
     public MyOrientation getRelativeOrientation(mxICell port) {
-        MyOrientation pos = MyConstants.MyOrientation.RIGHT;
-        double portx = port.getGeometry().getX() - 0.5;
-        double porty = port.getGeometry().getY() - 0.5;
-        if ((portx) >= Math.abs(porty)) {
-            pos = MyOrientation.RIGHT;
-        } else if (porty <= -Math.abs(portx)) {
-            pos = MyOrientation.DOWN;
-        } else if (portx <= -Math.abs(porty)) {
-            pos = MyOrientation.LEFT;
-        } else if (porty >= Math.abs(portx)) {
-            pos = MyOrientation.UP;
+        MyOrientation pos = MyConstants.MyOrientation.EAST;
+        // the coordinate (x,y) for the port.
+        double portx = graph.getView().getState(port).getCenterX();
+        double porty = graph.getView().getState(port).getCenterY();
+        // the coordinate (x,y) and the width-height for the parent block
+        mxICell parent = port.getParent();
+        if (parent == null || parent == graph.getDefaultParent()) {
+            return MyOrientation.EAST;
+        }
+        double blockx = graph.getView().getState(parent).getCenterX();
+        double blocky = graph.getView().getState(parent).getCenterY();
+        double blockw = parent.getGeometry().getWidth();
+        double blockh = parent.getGeometry().getHeight();
+        // calculate relative coordinate based on the center of parent block.
+        portx -= blockx;
+        porty -= blocky;
+        if ((portx) >= blockw * Math.abs(porty) / blockh) { // x>=w*|y|/h
+            pos = MyOrientation.EAST;
+        } else if (porty >= blockh * Math.abs(portx) / blockw) { // y>=h*|x|/w
+            pos = MyOrientation.SOUTH;
+        } else if (portx <= -blockw * Math.abs(porty) / blockh) { // x<=-w*|y|/h
+            pos = MyOrientation.WEST;
+        } else if (porty <= -blockh * Math.abs(portx) / blockw) { // y<=-h*|x|/w
+            pos = MyOrientation.NORTH;
         }
         return pos;
     }
@@ -389,11 +406,11 @@ public class ChangeAction extends AbstractAction {
      * Remove the relative cell from the array.
      * 
      * @param all
-     * @param me
+     * @param self
      * @return a new array of all objects excluding me
      */
-    public Object[] removeMyself(Object[] all, Object... me) {
-        List<Object> listme = Arrays.asList(me);
+    public Object[] getAllOtherCells(Object[] all, Object... self) {
+        List<Object> listme = Arrays.asList(self);
         List<Object> listnew = new ArrayList<>(0);
         System.out.println(all.length + ", " + listme.size());
         // Iterator<Object> iterator = list.iterator();
@@ -409,7 +426,22 @@ public class ChangeAction extends AbstractAction {
             }
         }
         Object[] newAll = listnew.toArray();
-        System.out.println("Size: " + newAll.length);
+        // Object[] newAll = new Object[all.length];
+        // int i = 0;
+        // for (Object o : all) {
+        // boolean flag = true;
+        // for (Object s : self) {
+        // if (o.equals(s)) {
+        // flag = false;
+        // break;
+        // }
+        // }
+        // if (flag) {
+        // newAll[i] = o;
+        // i++;
+        // }
+        // }
+        // return Arrays.copyOf(all, i);
         return newAll;
     }
 
@@ -423,7 +455,7 @@ public class ChangeAction extends AbstractAction {
      * @return MyOrientation
      */
     public MyOrientation getRelativeOrientation(mxPoint point1, mxPoint point2) {
-        MyOrientation pos = MyConstants.MyOrientation.RIGHT;
+        MyOrientation pos = MyConstants.MyOrientation.EAST;
         double x1 = point1.getX();
         double y1 = point1.getY();
         double x2 = point1.getX();
@@ -431,13 +463,13 @@ public class ChangeAction extends AbstractAction {
         double x = x2 - x1;
         double y = y2 - y1;
         if (x >= Math.abs(y)) {
-            pos = MyOrientation.RIGHT;
+            pos = MyOrientation.EAST;
         } else if (y <= -Math.abs(x)) {
-            pos = MyOrientation.DOWN;
+            pos = MyOrientation.SOUTH;
         } else if (x <= -Math.abs(y)) {
-            pos = MyOrientation.LEFT;
+            pos = MyOrientation.WEST;
         } else if (y >= Math.abs(x)) {
-            pos = MyOrientation.UP;
+            pos = MyOrientation.NORTH;
         }
         return pos;
     }
