@@ -3,6 +3,7 @@ package org.zhuchenf.demo;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -117,8 +118,11 @@ public class ChangeAction extends AbstractAction {
             mxGeometry geometry = new mxGeometry();
             boolean flag = computeRoute(cell, allOtherCells);
             if (flag) {
+                List<mxPoint> list = new ArrayList<mxPoint>(0);
+                list.addAll(listRoute);
                 geometry.setPoints(listRoute);
                 ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
+                listRoute.clear();
             } else {
                 System.out.println("No optimal");
                 graph.setCellStyle("", new Object[] { cell });
@@ -164,26 +168,145 @@ public class ChangeAction extends AbstractAction {
         this.getPointAwayPort(tgtp1, tgt);
         // if two ports are not oblique and not in the same direction,
         // use straight route.
-        if ((!checkOblique(srcp, tgtp) || !checkOblique(srcp1, tgtp1))
-                && !checkObstacle(srcp1, tgtp1, allCells)) {
+        if (!checkOblique(srcp, tgtp) && !checkObstacle(srcp, tgtp, allCells)) {
+            return true;
+        }
+        if (!checkOblique(srcp1, tgtp1) && !checkObstacle(srcp1, tgtp1, allCells)) {
+            listRoute.add(srcp1);
+            listRoute.add(tgtp1);
             return true;
         }
         // listPath.clear();
         // System.out.println(pathValue(srcp1, tgtp1, new mxPoint((srcx +
         // srcp1.getX()) / 2,
         // (srcy + srcp1.getY()) / 2), allCells));
-        listRoute.add(srcp1);
+        // listRoute.add(srcp1);
+        List<mxPoint> list = this.getSimpleRoute(srcp1, tgtp1, allCells);
+        if (list != null && list.size() > 0) {
+            listRoute.addAll(list);
+            return true;
+        } else {
+            ;
+        }
         // Collections.reverse(listPath);
         // listRoute.addAll(listPath);
-        listRoute.add(tgtp1);
+        // listRoute.add(tgtp1);
         return true;
     }
 
-    public List<mxPoint> check(mxPoint p1, mxPoint p2) {
+    /**
+     * In the method, only 4 turning points at most are supported.
+     * 
+     * @param p1
+     *            the source point
+     * @param p2
+     *            the target point
+     * @param allCells
+     *            all the possible
+     * @return
+     */
+    public List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
         // point1 and point2 are not in the vertical or horizontal line.
-        List<mxPoint> list = new ArrayList<>(0);
+        List<mxPoint> listRoute = new ArrayList<>(0);
+        List<Double> listX = new ArrayList<>(0);
+        List<Double> listY = new ArrayList<>(0);
+        double distance = MyConstants.BEAUTY_DISTANCE;
+        double x1 = p1.getX();
+        double y1 = p1.getY();
+        double x2 = p2.getX();
+        double y2 = p2.getY();
+        // simplest situation
+        if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(x2, y1), allCells)
+                && !checkObstacle(new mxPoint(x2, y1), new mxPoint(x2, y2), allCells)) {
+            listRoute.add(p1);
+            listRoute.add(new mxPoint(x2, y1));
+            listRoute.add(p2);
+            return listRoute;
+        } else if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(x1, y2), allCells)
+                && !checkObstacle(new mxPoint(x1, y2), new mxPoint(x2, y2), allCells)) {
+            listRoute.add(p1);
+            listRoute.add(new mxPoint(x1, y2));
+            listRoute.add(p2);
+            return listRoute;
+        }
+        // check the nodes in x-coordinate
+        double xmax = Math.max(x1 + distance, x2 + distance);
+        double xmin = Math.min(x1 - distance, x2 - distance);
+        for (double xi = xmin; xi <= xmax; xi++) {
+            if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(xi, y1), allCells)
+                    && !checkObstacle(new mxPoint(xi, y1), new mxPoint(xi, y2), allCells)
+                    && !checkObstacle(new mxPoint(xi, y2), new mxPoint(x2, y2), allCells)) {
+                listX.add(xi);
+            }
+        }
+        if (listX.size() > 0) {
+            int x = choosePoint(listX);
+            listRoute.add(p1);
+            listRoute.add(new mxPoint(x, y1));
+            listRoute.add(new mxPoint(x, y2));
+            listRoute.add(p2);
+            return listRoute;
+        }
+        // check the nodes in y-coordinate
+        double ymax = Math.max(y1 + distance, y2 + distance);
+        double ymin = Math.min(y1 - distance, y2 - distance);
+        for (double yi = ymin; yi <= ymax; yi++) {
+            if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(x1, yi), allCells)
+                    && !checkObstacle(new mxPoint(x1, yi), new mxPoint(x2, yi), allCells)
+                    && !checkObstacle(new mxPoint(x2, yi), new mxPoint(x2, y2), allCells)) {
+                listY.add(yi);
+            }
+        }
+        if (listY.size() > 0) {
+            int y = choosePoint(listY);
+            listRoute.add(p1);
+            listRoute.add(new mxPoint(x1, y));
+            listRoute.add(new mxPoint(x2, y));
+            listRoute.add(p2);
+            return listRoute;
+        }
+        listRoute.add(p1);
+        listRoute.add(p2);
+        return listRoute;
+    }
 
-        return list;
+    /**
+     * 
+     * @param list
+     * @return
+     */
+    public int choosePoint(List<Double> list) {
+        if (list == null || list.size() == 0) {
+            return 0;
+        }
+        double start = list.get(0);
+        double start_temp = list.get(0);
+        double end = list.get(0);
+        double end_temp = list.get(0);
+        int counter = 1;
+        for (int i = 1; i < list.size(); i++) {
+            if (Math.abs(list.get(i) - list.get(i - 1)) <= 1.1) {
+                end_temp = list.get(i);
+                counter++;
+            } else {
+                if (counter == 1) {
+                    start_temp = list.get(i);
+                    continue;
+                }
+                if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
+                    start = start_temp;
+                    end = end_temp;
+                    start_temp = list.get(i);
+                    end_temp = list.get(i);
+                    counter = 1;
+                }
+            }
+        }
+        if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
+            start = start_temp;
+            end = end_temp;
+        }
+        return (int) ((start + end) / 2);
     }
 
     private List<mxPoint> listPath = new ArrayList<>(0);
@@ -324,7 +447,7 @@ public class ChangeAction extends AbstractAction {
     }
 
     public void getPointAwayPort(mxPoint point, mxICell port) {
-        double away = MyConstants.SLOPE_ERROR;
+        double away = MyConstants.BEAUTY_DISTANCE;
         switch (getRelativeOrientation(port)) {
         case EAST:
             point.setX(point.getX() + away);
@@ -474,4 +597,16 @@ public class ChangeAction extends AbstractAction {
         return pos;
     }
 
+    /**
+     * 
+     * @param a
+     * @param b
+     * @return
+     */
+    public boolean isAcceptableError(double a, double b) {
+        if (Math.abs(a - b) <= 1) {
+            return true;
+        }
+        return false;
+    }
 }

@@ -79,8 +79,14 @@ public class MyConstants {
         }
     };
 
-    public final static double SLOPE_ERROR = 15;
+    /**
+     * 
+     */
+    public final static double SLOPE_ERROR = 5;
     
+    /**
+     * 
+     */
     public final static double BEAUTY_DISTANCE = 15;
 
 }
