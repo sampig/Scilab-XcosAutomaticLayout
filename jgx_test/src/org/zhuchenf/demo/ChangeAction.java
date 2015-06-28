@@ -3,7 +3,6 @@ package org.zhuchenf.demo;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -82,6 +81,8 @@ public class ChangeAction extends AbstractAction {
             graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "0", cells);
             graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW, cells);
             graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL, cells);
+            // System.out.println(((mxCell)
+            // cells[0]).getGeometry().getPoints().size());
             graph.resetEdges(cells);
         } finally {
             graph.getModel().endUpdate();
@@ -120,7 +121,7 @@ public class ChangeAction extends AbstractAction {
             if (flag) {
                 List<mxPoint> list = new ArrayList<mxPoint>(0);
                 list.addAll(listRoute);
-                geometry.setPoints(listRoute);
+                geometry.setPoints(list);
                 ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
                 listRoute.clear();
             } else {
@@ -157,6 +158,8 @@ public class ChangeAction extends AbstractAction {
         // double cgy = cg.getCenterY();
         double srcx = graph.getView().getState(src).getCenterX();
         double srcy = graph.getView().getState(src).getCenterY();
+        System.out.println(srcx + "," + srcy + " ; " + src.getGeometry().getCenterX() + ","
+                + src.getGeometry().getCenterY());
         mxPoint srcp = new mxPoint(srcx, srcy);
         double tgtx = graph.getView().getState(tgt).getCenterX();
         double tgty = graph.getView().getState(tgt).getCenterY();
@@ -164,8 +167,12 @@ public class ChangeAction extends AbstractAction {
         // get a new point a little away from port.
         mxPoint srcp1 = new mxPoint(srcx, srcy);
         mxPoint tgtp1 = new mxPoint(tgtx, tgty);
-        this.getPointAwayPort(srcp1, src);
-        this.getPointAwayPort(tgtp1, tgt);
+        if (src.getParent() != null && src.getParent() != graph.getDefaultParent()) {
+            this.getPointAwayPort(srcp1, src);
+        }
+        if (tgt.getParent() != null && tgt.getParent() != graph.getDefaultParent()) {
+            this.getPointAwayPort(tgtp1, tgt);
+        }
         // if two ports are not oblique and not in the same direction,
         // use straight route.
         if (!checkOblique(srcp, tgtp) && !checkObstacle(srcp, tgtp, allCells)) {
@@ -478,7 +485,7 @@ public class ChangeAction extends AbstractAction {
         double porty = graph.getView().getState(port).getCenterY();
         // the coordinate (x,y) and the width-height for the parent block
         mxICell parent = port.getParent();
-        if (parent == null || parent == graph.getDefaultParent()) {
+        if (parent == null || parent == graph.getDefaultParent()) { //
             return MyOrientation.EAST;
         }
         double blockx = graph.getView().getState(parent).getCenterX();
@@ -517,6 +524,9 @@ public class ChangeAction extends AbstractAction {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
                 mxPoint interction = c.getGeometry().intersectLine(x0, y0, x1, y1);
+                if (c.isEdge()) {
+                    // System.out.println("***Edge.");
+                }
                 if (interction != null) {
                     return true;
                 }

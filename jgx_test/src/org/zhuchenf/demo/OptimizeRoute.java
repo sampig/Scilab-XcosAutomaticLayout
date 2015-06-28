@@ -18,6 +18,7 @@ import javax.swing.SwingUtilities;
 import org.scilab.modules.graph.ScilabComponent;
 import org.scilab.modules.graph.ScilabGraph;
 
+import com.mxgraph.analysis.mxAnalysisGraph;
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
@@ -39,6 +40,7 @@ public class OptimizeRoute extends JFrame {
 
     private ScilabComponent graphComponent;
     private ScilabGraph graph;
+    private mxAnalysisGraph aGraph = new mxAnalysisGraph();
 
     private Random r = new Random(System.currentTimeMillis());
     private List<Object> listVertex = new ArrayList<>(0);
@@ -112,6 +114,11 @@ public class OptimizeRoute extends JFrame {
                     if (cell != null && cell instanceof mxCell) {
                         if (((mxCell) cell).isEdge()) {
                             // System.out.println("Edge: " + cell);
+                            mxGeometry g = ((mxCell) cell).getGeometry();
+                            System.out.println("Edge Geometry: (" + g.getX() + ", " + g.getY()
+                                    + "), (" + g.getWidth() + ", " + g.getHeight() + ")");
+                            aGraph.setGraph(graph);
+                            //System.out.println(mxGraphStructure.isCutEdge(aGraph, cell));
                         }
                         showMenu(e);
                     }
