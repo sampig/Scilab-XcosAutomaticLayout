@@ -130,42 +130,40 @@ public class StyleOptimalAction extends StyleAction {
         listRoute.clear();
         mxICell sourceCell = link.getSource();
         mxICell targetCell = link.getTarget();
-        // for now, it is only support for BasicPort
-        if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)) {
+        double srcx = graph.getView().getState(sourceCell).getCenterX();
+        double srcy = graph.getView().getState(sourceCell).getCenterY();
+        double tgtx = graph.getView().getState(targetCell).getCenterX();
+        double tgty = graph.getView().getState(targetCell).getCenterY();
+        mxPoint sourcePoint = new mxPoint(srcx, srcy);
+        mxPoint targetPoint = new mxPoint(tgtx, tgty);
+        // if the link is not connected.
+        if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)
+                || !(sourceCell instanceof SplitBlock) || !(targetCell instanceof SplitBlock)) {
             return false;
         }
-        if ((sourceCell instanceof SplitBlock) || (targetCell instanceof SplitBlock)) {
-            // it will provide another method to decide whether to move the
-            // split node or not.
+        // if source is a port, get a new start point.
+        if (sourceCell instanceof BasicPort) {
+            BasicPort sourcePort = (BasicPort) sourceCell;
+            sourcePoint = this.getPointAwayPort(sourcePort, graph);
         }
-        BasicPort sourcePort = (BasicPort) sourceCell;
-        BasicPort targetPort = (BasicPort) targetCell;
-        double srcx = graph.getView().getState(sourcePort).getCenterX();
-        double srcy = graph.getView().getState(sourcePort).getCenterY();
-        double tgtx = graph.getView().getState(targetPort).getCenterX();
-        double tgty = graph.getView().getState(targetPort).getCenterY();
+        // if target is a port, get a new end point.
+        if (targetCell instanceof BasicPort) {
+            BasicPort targetPort = (BasicPort) targetCell;
+            targetPoint = this.getPointAwayPort(targetPort, graph);
+        }
         // if two ports are not oblique and not in the same direction,
         // use straight route.
         if ((!XcosRoute.isAligned(srcx, srcy, tgtx, tgty))
                 && !XcosRoute.checkObstacle(srcx, srcy, tgtx, tgty, allCells)) {
             return true;
         }
-        mxPoint sourcePoint1 = this.getPointAwayPort(sourcePort, graph);
-        mxPoint targetPoint1 = this.getPointAwayPort(targetPort, graph);
-        XcosRoute route = new XcosRoute();
-        List<mxPoint> list = route.getSimpleRoute(sourcePoint1, targetPoint1, allCells);
+        List<mxPoint> list = XcosRoute.getSimpleRoute(sourcePoint, targetPoint, allCells);
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
         }
-        // list = route.getRoute(sourcePoint1, new mxPoint(
-        // (srcx + sourcePoint1.getX()) / 2, (srcy + sourcePoint1.getY()) / 2),
-        // targetPoint1, allCells);
-        // Collections.reverse(listRoute);
-        // listRoute.addAll(list);
-        // return true;
-        listRoute.add(sourcePoint1);
-        listRoute.add(targetPoint1);
+        listRoute.add(sourcePoint);
+        listRoute.add(targetPoint);
         return false;
     }
 

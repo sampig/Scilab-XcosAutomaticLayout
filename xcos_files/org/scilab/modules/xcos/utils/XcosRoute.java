@@ -119,10 +119,69 @@ public class XcosRoute {
         for (Object o : allCells) {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
-                mxPoint interction = c.getGeometry().intersectLine(x1, y1, x2, y2);
-                if (interction != null) {
-                    return true;
+                if (c.isEdge()) {
+                    if (checkLinesCoincide(x1, y1, x2, y2, c)) {
+                        ;// return true;
+                    }
+                } else {
+                    mxPoint interction = c.getGeometry().intersectLine(x1, y1, x2, y2);
+                    if (interction != null) {
+                        return true;
+                    }
                 }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether two lines coincide or not. The lines are vertical or
+     * horizontal. <br/>
+     * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
+     * 
+     * @param x1
+     *            the x-coordinate of the first point of the line
+     * @param y1
+     *            the y-coordinate of the first point of the line
+     * @param x2
+     *            the x-coordinate of the second point of the line
+     * @param y2
+     *            the y-coordinate of the second point of the line
+     * @param edge
+     * @return <b>true</b> if two lines coincide completely or partly.
+     */
+    private static boolean checkLinesCoincide(double x1, double y1, double x2, double y2,
+            mxCell edge) {
+        if (edge.isVertex()) {
+            return false;
+        }
+        // mxICell source = line.getSource();
+        // mxICell target = line.getTarget();
+        List<mxPoint> listPoints = edge.getGeometry().getPoints();
+        if (listPoints == null || listPoints.size() == 0) {
+            // if this, the edge is straight or vertical or horizontal style.
+            // source.getGeometry().getCenterX();
+            // target.getGeometry().getCenterY();
+        } else if (listPoints.size() == 1) {
+        } else {
+            for (int i = 1; i < listPoints.size(); i++) {
+                mxPoint point3 = listPoints.get(i - 1);
+                mxPoint point4 = listPoints.get(i);
+                double x3 = point3.getX();
+                double y3 = point3.getY();
+                double x4 = point4.getX();
+                double y4 = point4.getY();
+                if (x1 == x2) {
+                    if (x3 != x1 || x4 != x1) {
+                        return false;
+                    }
+                }
+                if (y1 == y2) {
+                    if (y3 != y1 || y4 != y1) {
+                        return false;
+                    }
+                }
+                // unfinished;
             }
         }
         return false;
@@ -141,10 +200,10 @@ public class XcosRoute {
      */
     public static List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
         // point1 and point2 are not in the vertical or horizontal line.
-        List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
+        List<mxPoint> listSimpleRoute = new ArrayList<mxPoint>(0);
         List<Double> listX = new ArrayList<Double>(0);
         List<Double> listY = new ArrayList<Double>(0);
-        double distance = BEAUTY_DISTANCE;
+        double distance = XcosRoute.BEAUTY_DISTANCE;
         double x1 = p1.getX();
         double y1 = p1.getY();
         double x2 = p2.getX();
@@ -152,16 +211,16 @@ public class XcosRoute {
         // simplest situation
         if (!checkObstacle(x1, y1, x2, y1, allCells)
                 && !checkObstacle(x2, y1, x2, y2, allCells)) {
-            listRoute.add(p1);
-            listRoute.add(new mxPoint(x2, y1));
-            listRoute.add(p2);
-            return listRoute;
+            listSimpleRoute.add(p1);
+            listSimpleRoute.add(new mxPoint(x2, y1));
+            listSimpleRoute.add(p2);
+            return listSimpleRoute;
         } else if (!checkObstacle(x1, y1, x1, y2, allCells)
                 && !checkObstacle(x1, y2, x2, y2, allCells)) {
-            listRoute.add(p1);
-            listRoute.add(new mxPoint(x1, y2));
-            listRoute.add(p2);
-            return listRoute;
+            listSimpleRoute.add(p1);
+            listSimpleRoute.add(new mxPoint(x1, y2));
+            listSimpleRoute.add(p2);
+            return listSimpleRoute;
         }
         // check the nodes in x-coordinate
         double xmax = Math.max(x1 + distance, x2 + distance);
@@ -175,11 +234,11 @@ public class XcosRoute {
         }
         if (listX.size() > 0) {
             double x = choosePoint(listX);
-            listRoute.add(p1);
-            listRoute.add(new mxPoint(x, y1));
-            listRoute.add(new mxPoint(x, y2));
-            listRoute.add(p2);
-            return listRoute;
+            listSimpleRoute.add(p1);
+            listSimpleRoute.add(new mxPoint(x, y1));
+            listSimpleRoute.add(new mxPoint(x, y2));
+            listSimpleRoute.add(p2);
+            return listSimpleRoute;
         }
         // check the nodes in y-coordinate
         double ymax = Math.max(y1 + distance, y2 + distance);
@@ -193,15 +252,15 @@ public class XcosRoute {
         }
         if (listY.size() > 0) {
             double y = choosePoint(listY);
-            listRoute.add(p1);
-            listRoute.add(new mxPoint(x1, y));
-            listRoute.add(new mxPoint(x2, y));
-            listRoute.add(p2);
-            return listRoute;
+            listSimpleRoute.add(p1);
+            listSimpleRoute.add(new mxPoint(x1, y));
+            listSimpleRoute.add(new mxPoint(x2, y));
+            listSimpleRoute.add(p2);
+            return listSimpleRoute;
         }
         // listRoute.add(p1);
         // listRoute.add(p2);
-        return listRoute;
+        return listSimpleRoute;
     }
 
     /**
