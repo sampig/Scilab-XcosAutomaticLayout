@@ -63,16 +63,4 @@ public abstract class StyleAction extends DefaultAction {
         }
     }
 
-    /**
-     * Copy from this.reset(final ScilabGraph graph, final Object[] edges).
-     * 
-     * @param graph
-     * @param edge
-     * @author Chenfeng ZHU
-     */
-    protected void reset(final ScilabGraph graph, final Object edge) {
-        final SelectionCellsHandler selectionCellsHandler = (SelectionCellsHandler) graph.getAsComponent().getSelectionCellsHandler();
-        graph.resetEdge(edge);
-        selectionCellsHandler.clearCellHandler(edge);
-    }
 }

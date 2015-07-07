@@ -24,7 +24,9 @@ import org.scilab.modules.xcos.utils.XcosRoute;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxPoint;
+import com.mxgraph.view.mxCellState;
 
 /**
  * Implement the set link optimal action.
@@ -39,6 +41,8 @@ public class StyleOptimalAction extends StyleAction {
     public static final int MNEMONIC_KEY = KeyEvent.VK_O;
 
     private List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
+
+    private Object[] allChildCells;
 
     public StyleOptimalAction(ScilabGraph scilabGraph) {
         super(scilabGraph);
@@ -70,7 +74,11 @@ public class StyleOptimalAction extends StyleAction {
 
         graph.getModel().beginUpdate();
         try {
+            // graph.setCellStyle(null, links);
+            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", links);
+            reset(graph, links);
             this.updateLinkOptimal(graph, links);
+            // reset(graph, links);
         } finally {
             graph.getModel().endUpdate();
         }
@@ -83,7 +91,7 @@ public class StyleOptimalAction extends StyleAction {
      * @param links
      */
     public void updateLinkOptimal(XcosDiagram graph, Object[] links) {
-        Object[] allChildCells = graph.getChildCells(graph.getDefaultParent());
+        allChildCells = graph.getChildCells(graph.getDefaultParent());
         for (Object o : links) {
             if (o instanceof BasicLink) {
                 BasicLink link = (BasicLink) o;
@@ -126,38 +134,70 @@ public class StyleOptimalAction extends StyleAction {
      * @param allCells
      * @return list of turning points
      */
-    public boolean computeRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
+    protected boolean computeRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
         listRoute.clear();
         mxICell sourceCell = link.getSource();
         mxICell targetCell = link.getTarget();
-        double srcx = graph.getView().getState(sourceCell).getCenterX();
-        double srcy = graph.getView().getState(sourceCell).getCenterY();
-        double tgtx = graph.getView().getState(targetCell).getCenterX();
-        double tgty = graph.getView().getState(targetCell).getCenterY();
-        mxPoint sourcePoint = new mxPoint(srcx, srcy);
-        mxPoint targetPoint = new mxPoint(tgtx, tgty);
-        // if the link is not connected.
-        if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)
-                || !(sourceCell instanceof SplitBlock) || !(targetCell instanceof SplitBlock)) {
+        // if the link is not connected with BasicPort.
+        if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)) {
+            // if ((!(sourceCell instanceof BasicPort) && !(sourceCell
+            // instanceof SplitBlock))
+            // || (!(targetCell instanceof BasicPort) && !(targetCell instanceof
+            // SplitBlock))) {
             return false;
         }
+        Orientation sourcePortOrien = null;
+        Orientation targetPortOrien = null;
+        double srcx = 0;
+        double srcy = 0;
+        double tgtx = 0;
+        double tgty = 0;
+        mxPoint sourcePoint = new mxPoint(srcx, srcy);
+        mxPoint targetPoint = new mxPoint(tgtx, tgty);
         // if source is a port, get a new start point.
         if (sourceCell instanceof BasicPort) {
-            BasicPort sourcePort = (BasicPort) sourceCell;
-            sourcePoint = this.getPointAwayPort(sourcePort, graph);
+            mxCellState state = graph.getView().getState(sourceCell);
+            if (state != null) {
+                srcx = state.getCenterX();
+                srcy = state.getCenterY();
+                BasicPort sourcePort = (BasicPort) sourceCell;
+                sourcePoint = this.getPointAwayPort(sourcePort, graph);
+                sourcePortOrien = getPortRelativeOrientation(sourcePort, graph);
+            }
+        }
+        // if source is a SplitBlock
+        if (sourceCell.getParent() instanceof SplitBlock) {
+            srcx = sourceCell.getParent().getGeometry().getCenterX();
+            srcy = sourceCell.getParent().getGeometry().getCenterY();
+            sourcePoint.setX(srcx);
+            sourcePoint.setY(srcy);
         }
         // if target is a port, get a new end point.
         if (targetCell instanceof BasicPort) {
-            BasicPort targetPort = (BasicPort) targetCell;
-            targetPoint = this.getPointAwayPort(targetPort, graph);
+            mxCellState state = graph.getView().getState(targetCell);
+            if (state != null) {
+                tgtx = state.getCenterX();
+                tgty = state.getCenterY();
+                BasicPort targetPort = (BasicPort) targetCell;
+                targetPoint = this.getPointAwayPort(targetPort, graph);
+                targetPortOrien = getPortRelativeOrientation(targetPort, graph);
+            }
         }
-        // if two ports are not oblique and not in the same direction,
+        // if target is a SplitBlock
+        if (targetCell.getParent() instanceof SplitBlock) {
+            tgtx = targetCell.getParent().getGeometry().getCenterX();
+            tgty = targetCell.getParent().getGeometry().getCenterY();
+            targetPoint.setX(tgtx);
+            targetPoint.setY(tgty);
+        }
+        // if two ports are aligned and there are no blocks between them,
         // use straight route.
-        if ((!XcosRoute.isAligned(srcx, srcy, tgtx, tgty))
+        if ((XcosRoute.isStrictlyAligned(srcx, srcy, tgtx, tgty))
                 && !XcosRoute.checkObstacle(srcx, srcy, tgtx, tgty, allCells)) {
             return true;
         }
-        List<mxPoint> list = XcosRoute.getSimpleRoute(sourcePoint, targetPoint, allCells);
+        List<mxPoint> list = XcosRoute.getSimpleRoute(sourcePoint, sourcePortOrien,
+                targetPoint, targetPortOrien, allCells);
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
@@ -175,11 +215,15 @@ public class StyleOptimalAction extends StyleAction {
      * @param graph
      * @return
      */
-    public mxPoint getPointAwayPort(BasicPort port, XcosDiagram graph) {
+    protected mxPoint getPointAwayPort(BasicPort port, XcosDiagram graph) {
         double portx = graph.getView().getState(port).getCenterX();
         double porty = graph.getView().getState(port).getCenterY();
         mxPoint point = new mxPoint(portx, porty);
-        double distance = XcosRoute.BEAUTY_DISTANCE;
+        double distance = XcosRoute.BEAUTY_AWAY_DISTANCE;
+        if (XcosRoute.checkPointInLines(portx, porty, allChildCells)
+                && distance > XcosRoute.BEAUTY_AWAY_REVISION) {
+            distance -= XcosRoute.BEAUTY_AWAY_REVISION;
+        }
         switch (getPortRelativeOrientation(port, graph)) {
         // switch (port.getOrientation()) {
         case EAST:
@@ -206,7 +250,7 @@ public class StyleOptimalAction extends StyleAction {
      * @param port
      * @return
      */
-    public Orientation getPortRelativeOrientation(BasicPort port, XcosDiagram graph) {
+    protected Orientation getPortRelativeOrientation(BasicPort port, XcosDiagram graph) {
         // the coordinate (x,y) for the port.
         double portx = graph.getView().getState(port).getCenterX();
         double porty = graph.getView().getState(port).getCenterY();
@@ -233,17 +277,20 @@ public class StyleOptimalAction extends StyleAction {
     }
 
     /**
-     * Remove the selves from the array of all.
+     * Remove the selves from the array of all. Remove all SplitBlock.
      * 
      * @param all
      * @param self
      * @return a new array of all objects excluding selves
      */
-    public Object[] getAllOtherCells(Object[] all, Object... self) {
+    protected Object[] getAllOtherCells(Object[] all, Object... self) {
         List<Object> listme = Arrays.asList(self);
         List<Object> listnew = new ArrayList<Object>(0);
         for (Object o : all) {
-            if (!listme.contains(o)) {
+            if (!listme.contains(o) && !(o instanceof SplitBlock)) { //
+                // if (o instanceof SplitBlock) {
+                // System.out.println("SplitBlock: " + o);
+                // }
                 listnew.add(o);
             }
         }
