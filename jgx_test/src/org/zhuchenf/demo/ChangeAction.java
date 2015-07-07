@@ -48,6 +48,7 @@ public class ChangeAction extends AbstractAction {
             } else if ("Optimal".equalsIgnoreCase(name)) {
                 graph.getModel().beginUpdate();
                 try {
+                    graph.setCellStyle(null, cells);
                     this.updateLinkOptimal(cells);
                 } finally {
                     graph.getModel().endUpdate();
@@ -114,12 +115,14 @@ public class ChangeAction extends AbstractAction {
         Object[] allOtherCells = getAllOtherCells(all, cell, src, tgt);
         if (src != null && tgt != null) {
             System.out.println("All other vertices: " + allOtherCells.length);
-            System.out.println("Change the edge.");
+            List<mxPoint> ps = cell.getGeometry().getPoints();
+            System.out.println("Edge current turning points: "
+                    + ((ps == null) ? 0 : ps.size()));
             // graph.setCellStyle(getPath(cell,all), new Object[] {cell});
             mxGeometry geometry = new mxGeometry();
             boolean flag = computeRoute(cell, allOtherCells);
             if (flag) {
-                List<mxPoint> list = new ArrayList<mxPoint>(0);
+                List<mxPoint> list = new ArrayList<mxPoint>();
                 list.addAll(listRoute);
                 geometry.setPoints(list);
                 ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
@@ -137,6 +140,9 @@ public class ChangeAction extends AbstractAction {
                 System.out.println("Optimal is Straight.");
             }
         }
+        double x = 250.0;
+        double y = 37.5;
+        System.out.println(checkObstacle(new mxPoint(x, y), new mxPoint(x, y), allOtherCells));
     }
 
     /**
@@ -189,6 +195,7 @@ public class ChangeAction extends AbstractAction {
         // (srcy + srcp1.getY()) / 2), allCells));
         // listRoute.add(srcp1);
         List<mxPoint> list = this.getSimpleRoute(srcp1, tgtp1, allCells);
+        System.out.println("list: " + list);
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
@@ -217,7 +224,7 @@ public class ChangeAction extends AbstractAction {
         List<mxPoint> listRoute = new ArrayList<>(0);
         List<Double> listX = new ArrayList<>(0);
         List<Double> listY = new ArrayList<>(0);
-        double distance = MyConstants.BEAUTY_DISTANCE;
+        double distance = MyConstants.NORMAL_BLOCK_SIZE;
         double x1 = p1.getX();
         double y1 = p1.getY();
         double x2 = p2.getX();
@@ -316,12 +323,21 @@ public class ChangeAction extends AbstractAction {
         return (int) ((start + end) / 2);
     }
 
+    public List<mxPoint> getComplexRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
+        List<mxPoint> listRoute = new ArrayList<>(0);
+        listRoute = getSimpleRoute(p1, p2, allCells);
+        if (listRoute == null || listRoute.size() == 0) {
+            ;
+        }
+        return listRoute;
+    }
+
     private List<mxPoint> listPath = new ArrayList<>(0);
     private int vTurning = 200;
     private int bound = 1000;
 
     public int pathValue(mxPoint current, mxPoint target, mxPoint last, Object[] allCells) {
-        double step = MyConstants.BEAUTY_DISTANCE;
+        double step = MyConstants.BEAUTY_AWAY_DISTANCE;
         int value = (int) step;
         int vEast = 0; // value in east direction
         int vSouth = 0;// value in south direction
@@ -421,7 +437,123 @@ public class ChangeAction extends AbstractAction {
         return d;
     }
 
-    public boolean isInLine(double x1, double y1, double x2, double y2, double x3, double y3) {
+    /**
+     * Check whether two lines coincide or not. The lines are vertical or
+     * horizontal. <br/>
+     * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
+     * 
+     * @param x1
+     *            the x-coordinate of the first point of the first line
+     * @param y1
+     *            the y-coordinate of the first point of the first line
+     * @param x2
+     *            the x-coordinate of the second point of the first line
+     * @param y2
+     *            the y-coordinate of the second point of the first line
+     * @param edge
+     *            the second line
+     * @return <b>true</b> if two lines coincide completely or partly.
+     */
+    public static boolean checkLinesCoincide(double x1, double y1, double x2, double y2,
+            mxCell edge) {
+        if (edge.isVertex()) {
+            return false;
+        }
+        // mxICell source = line.getSource();
+        // mxICell target = line.getTarget();
+        List<mxPoint> listPoints = edge.getGeometry().getPoints();
+        if (listPoints == null || listPoints.size() == 0) {
+            // if the edge is straight or vertical or horizontal style, there is
+            // no way to check.
+        } else if (listPoints.size() == 1) {
+        } else {
+            for (int i = 1; i < listPoints.size(); i++) {
+                mxPoint point3 = listPoints.get(i - 1);
+                mxPoint point4 = listPoints.get(i);
+                double x3 = point3.getX();
+                double y3 = point3.getY();
+                double x4 = point4.getX();
+                double y4 = point4.getY();
+                if (x1 == x2) {
+                    if (x3 != x1 || x4 != x1) {
+                        return false;
+                    }
+                }
+                if (y1 == y2) {
+                    if (y3 != y1 || y4 != y1) {
+                        return false;
+                    }
+                }
+                if (linesCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether two lines coincide or not.
+     * 
+     * @param x1
+     *            the x-coordinate of the first point of the first line
+     * @param y1
+     *            the y-coordinate of the first point of the first line
+     * @param x2
+     *            the x-coordinate of the second point of the first line
+     * @param y2
+     *            the y-coordinate of the second point of the first line
+     * @param x3
+     *            the x-coordinate of the first point of the second line
+     * @param y3
+     *            the y-coordinate of the first point of the second line
+     * @param x4
+     *            the x-coordinate of the second point of the second line
+     * @param y4
+     *            the y-coordinate of the second point of the second line
+     * @return <b>true</b> if two lines coincide.
+     */
+    public static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3,
+            double y3, double x4, double y4) {
+        // the first line is inside the second line.
+        if (pointInLine(x1, y1, x3, y3, x4, y4) && pointInLine(x2, y2, x3, y3, x4, y4)) {
+            return true;
+        }
+        // the second line is inside the first line.
+        if (pointInLine(x3, y3, x1, y1, x2, y2) && pointInLine(x4, y4, x1, y1, x2, y2)) {
+            return true;
+        }
+        double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        // two lines are parallel.
+        if (i == 0) {
+            if (pointInLine(x1, y1, x3, y3, x4, y4) || pointInLine(x2, y2, x3, y3, x4, y4)
+                    || pointInLine(x3, y3, x1, y1, x2, y2)
+                    || pointInLine(x4, y4, x1, y1, x2, y2)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether the point is in the line segment or not.
+     * 
+     * @param x1
+     *            the x-coordinate of the point
+     * @param y1
+     *            the y-coordinate of the point
+     * @param x2
+     *            the x-coordinate of the first point of the line
+     * @param y2
+     *            the y-coordinate of the first point of the line
+     * @param x3
+     *            the x-coordinate of the second point of the line
+     * @param y3
+     *            the y-coordinate of the second point of the line
+     * @return <b>true</b> if the point is in the line segment.
+     */
+    public static boolean pointInLine(double x1, double y1, double x2, double y2, double x3,
+            double y3) {
         double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
         double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
         double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
@@ -454,7 +586,7 @@ public class ChangeAction extends AbstractAction {
     }
 
     public void getPointAwayPort(mxPoint point, mxICell port) {
-        double away = MyConstants.BEAUTY_DISTANCE;
+        double away = MyConstants.BEAUTY_AWAY_DISTANCE;
         switch (getRelativeOrientation(port)) {
         case EAST:
             point.setX(point.getX() + away);
@@ -525,7 +657,9 @@ public class ChangeAction extends AbstractAction {
                 mxCell c = (mxCell) o;
                 mxPoint interction = c.getGeometry().intersectLine(x0, y0, x1, y1);
                 if (c.isEdge()) {
-                    // System.out.println("***Edge.");
+                    if (checkLinesCoincide(x0, y0, x1, y1, c)) {
+                        return true;
+                    }
                 }
                 if (interction != null) {
                     return true;
