@@ -61,7 +61,7 @@ public class OptimizeRoute extends JFrame {
 
         graph.getModel().beginUpdate();
         try {
-            mxCell v1 = (mxCell) graph.insertVertex(parent, null, "zhu", 20, 20, 80, 30,
+            mxCell v1 = (mxCell) graph.insertVertex(parent, null, "zhu", 20, 120, 80, 30,
                     "zhu_style");
             v1.setConnectable(false);
             mxGeometry geo = graph.getModel().getGeometry(v1);
@@ -72,7 +72,7 @@ public class OptimizeRoute extends JFrame {
             mxCell port1 = new mxCell("P1", geo1, "shape=ellipse;perimter=ellipsePerimeter");
             port1.setVertex(true);
             graph.addCell(port1, v1);
-            mxCell v2 = (mxCell) graph.insertVertex(parent, null, "chenfeng", 340, 20, 80, 30);
+            mxCell v2 = (mxCell) graph.insertVertex(parent, null, "chenfeng", 340, 120, 80, 30);
             v2.setConnectable(false);
             mxGeometry geo2 = new mxGeometry(0, 0.5, 2, 2);
             // geo2.setOffset(new mxPoint(0, 0));

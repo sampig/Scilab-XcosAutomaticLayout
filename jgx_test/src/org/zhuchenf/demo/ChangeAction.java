@@ -162,6 +162,8 @@ public class ChangeAction extends AbstractAction {
         // mxGeometry tgtg = tgt.getGeometry();
         // double cgx = cg.getCenterX();
         // double cgy = cg.getCenterY();
+        MyOrientation sourcePortOrien = null;
+        MyOrientation targetPortOrien = null;
         double srcx = graph.getView().getState(src).getCenterX();
         double srcy = graph.getView().getState(src).getCenterY();
         System.out.println(srcx + "," + srcy + " ; " + src.getGeometry().getCenterX() + ","
@@ -175,9 +177,11 @@ public class ChangeAction extends AbstractAction {
         mxPoint tgtp1 = new mxPoint(tgtx, tgty);
         if (src.getParent() != null && src.getParent() != graph.getDefaultParent()) {
             this.getPointAwayPort(srcp1, src);
+            sourcePortOrien = this.getRelativeOrientation(src);
         }
         if (tgt.getParent() != null && tgt.getParent() != graph.getDefaultParent()) {
             this.getPointAwayPort(tgtp1, tgt);
+            targetPortOrien = this.getRelativeOrientation(tgt);
         }
         // if two ports are not oblique and not in the same direction,
         // use straight route.
@@ -194,18 +198,30 @@ public class ChangeAction extends AbstractAction {
         // srcp1.getX()) / 2,
         // (srcy + srcp1.getY()) / 2), allCells));
         // listRoute.add(srcp1);
-        List<mxPoint> list = this.getSimpleRoute(srcp1, tgtp1, allCells);
-        System.out.println("list: " + list);
+        System.out.println("Orientation: " + sourcePortOrien + ", " + targetPortOrien);
+        List<mxPoint> list = this.getSimpleRoute(srcp1, sourcePortOrien, tgtp1,
+                targetPortOrien, allCells);
+        System.out.println("SimpleRoute: " + list);
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
         } else {
-            ;
+            list = this.getComplexRoute(srcp1, sourcePortOrien, tgtp1, targetPortOrien,
+                    allCells, 3);
+            System.out.println("ComplexRoute: " + list);
+            if (list != null && list.size() > 0) {
+                listRoute.addAll(list);
+                return true;
+            }
         }
         // Collections.reverse(listPath);
         // listRoute.addAll(listPath);
         // listRoute.add(tgtp1);
         return true;
+    }
+
+    public List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
+        return getSimpleRoute(p1, null, p2, null, allCells);
     }
 
     /**
@@ -219,7 +235,8 @@ public class ChangeAction extends AbstractAction {
      *            all the possible
      * @return
      */
-    public List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
+    public List<mxPoint> getSimpleRoute(mxPoint p1, MyOrientation o1, mxPoint p2,
+            MyOrientation o2, Object[] allCells) {
         // point1 and point2 are not in the vertical or horizontal line.
         List<mxPoint> listRoute = new ArrayList<>(0);
         List<Double> listX = new ArrayList<>(0);
@@ -232,15 +249,23 @@ public class ChangeAction extends AbstractAction {
         // simplest situation
         if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(x2, y1), allCells)
                 && !checkObstacle(new mxPoint(x2, y1), new mxPoint(x2, y2), allCells)) {
-            listRoute.add(p1);
+            if (o1 != MyOrientation.EAST && o1 != MyOrientation.WEST) {
+                listRoute.add(p1);
+            }
             listRoute.add(new mxPoint(x2, y1));
-            listRoute.add(p2);
+            if (o2 != MyOrientation.NORTH && o2 != MyOrientation.SOUTH) {
+                listRoute.add(p2);
+            }
             return listRoute;
         } else if (!checkObstacle(new mxPoint(x1, y1), new mxPoint(x1, y2), allCells)
                 && !checkObstacle(new mxPoint(x1, y2), new mxPoint(x2, y2), allCells)) {
-            listRoute.add(p1);
+            if (o1 != MyOrientation.NORTH && o1 != MyOrientation.SOUTH) {
+                listRoute.add(p1);
+            }
             listRoute.add(new mxPoint(x1, y2));
-            listRoute.add(p2);
+            if (o2 != MyOrientation.EAST && o2 != MyOrientation.WEST) {
+                listRoute.add(p2);
+            }
             return listRoute;
         }
         // check the nodes in x-coordinate
@@ -255,10 +280,14 @@ public class ChangeAction extends AbstractAction {
         }
         if (listX.size() > 0) {
             int x = choosePoint(listX);
-            listRoute.add(p1);
+            if (o1 != MyOrientation.EAST && o1 != MyOrientation.WEST) {
+                listRoute.add(p1);
+            }
             listRoute.add(new mxPoint(x, y1));
             listRoute.add(new mxPoint(x, y2));
-            listRoute.add(p2);
+            if (o2 != MyOrientation.EAST && o2 != MyOrientation.WEST) {
+                listRoute.add(p2);
+            }
             return listRoute;
         }
         // check the nodes in y-coordinate
@@ -273,14 +302,18 @@ public class ChangeAction extends AbstractAction {
         }
         if (listY.size() > 0) {
             int y = choosePoint(listY);
-            listRoute.add(p1);
+            if (o1 != MyOrientation.NORTH && o1 != MyOrientation.SOUTH) {
+                listRoute.add(p1);
+            }
             listRoute.add(new mxPoint(x1, y));
             listRoute.add(new mxPoint(x2, y));
-            listRoute.add(p2);
+            if (o2 != MyOrientation.NORTH && o2 != MyOrientation.SOUTH) {
+                listRoute.add(p2);
+            }
             return listRoute;
         }
-        listRoute.add(p1);
-        listRoute.add(p2);
+        // listRoute.add(p1);
+        // listRoute.add(p2);
         return listRoute;
     }
 
@@ -323,12 +356,69 @@ public class ChangeAction extends AbstractAction {
         return (int) ((start + end) / 2);
     }
 
-    public List<mxPoint> getComplexRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
-        List<mxPoint> listRoute = new ArrayList<>(0);
-        listRoute = getSimpleRoute(p1, p2, allCells);
-        if (listRoute == null || listRoute.size() == 0) {
-            ;
+    public List<mxPoint> getComplexRoute(mxPoint p1, MyOrientation o1, mxPoint p2,
+            MyOrientation o2, Object[] allCells, int times) {
+        if (times <= 0) {
+            return null;
         }
+        List<mxPoint> listRoute = new ArrayList<>(0);
+        List<mxPoint> listTmp = new ArrayList<>(0);
+        listRoute.add(p1);
+        List<mxPoint> listNewP1 = new ArrayList<>(0);
+        if (o1 != MyOrientation.EAST) {
+            mxPoint np1 = new mxPoint(p1.getX() - MyConstants.NORMAL_BLOCK_SIZE, p1.getY());
+            if (!checkObstacle(p1, np1, allCells)) {
+                listTmp = this.getSimpleRoute(np1, MyOrientation.WEST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listRoute.addAll(listTmp);
+                    return listRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != MyOrientation.WEST) {
+            mxPoint np1 = new mxPoint(p1.getX() + MyConstants.NORMAL_BLOCK_SIZE, p1.getY());
+            if (!checkObstacle(p1, np1, allCells)) {
+                listTmp = this.getSimpleRoute(np1, MyOrientation.EAST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listRoute.addAll(listTmp);
+                    return listRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != MyOrientation.SOUTH) {
+            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() - MyConstants.NORMAL_BLOCK_SIZE);
+            if (!checkObstacle(p1, np1, allCells)) {
+                listTmp = this.getSimpleRoute(np1, MyOrientation.NORTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listRoute.addAll(listTmp);
+                    return listRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != MyOrientation.NORTH) {
+            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() + MyConstants.NORMAL_BLOCK_SIZE);
+            if (!checkObstacle(p1, np1, allCells)) {
+                listTmp = this.getSimpleRoute(np1, MyOrientation.SOUTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listRoute.addAll(listTmp);
+                    return listRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        for (mxPoint np1 : listNewP1) {
+            listTmp = this.getComplexRoute(np1, null, p2, o2, allCells, times - 1);
+            if (listTmp != null && listTmp.size() > 1) {
+                listRoute.addAll(listTmp);
+                return listRoute;
+            } else {
+                // listRoute.addAll(this.getSimpleRoute(np1, p2, allCells));
+            }
+        }
+        listRoute.clear();
         return listRoute;
     }
 
@@ -557,7 +647,7 @@ public class ChangeAction extends AbstractAction {
         double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
         double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
         double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
-        if (l13 == (l12 + l23)) {
+        if (l23 == (l12 + l13)) {
             return true;
         }
         return false;
