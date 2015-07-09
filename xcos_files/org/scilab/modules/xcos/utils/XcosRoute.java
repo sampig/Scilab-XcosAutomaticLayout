@@ -17,7 +17,7 @@ import com.mxgraph.util.mxPoint;
  * Provide methods to calculate the route.
  *
  */
-public class XcosRoute {
+public abstract class XcosRoute {
 
     /**
      * The error which can be accepted as it is aligned.
@@ -38,7 +38,12 @@ public class XcosRoute {
     /**
      * Define a normal half size of block to avoid.
      */
-    public final static double NORMAL_BLOCK_SIZE = 30;
+    public final static double NORMAL_BLOCK_SIZE = 40;
+
+    /**
+     * Times trying to find a complex route.
+     */
+    public final static int TRY_TIMES = 3;
 
     /**
      * Check whether the two points are aligned(vertical or horizontal) or not
@@ -303,7 +308,7 @@ public class XcosRoute {
         double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
         double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
         double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
-        if (l13 == (l12 + l23)) {
+        if (l23 == (l12 + l13)) {
             return true;
         }
         return false;
@@ -384,10 +389,14 @@ public class XcosRoute {
         }
         if (listX.size() > 0) {
             double x = choosePoint(listX);
-            listSimpleRoute.add(p1);
+            if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
+                listSimpleRoute.add(p1);
+            }
             listSimpleRoute.add(new mxPoint(x, y1));
             listSimpleRoute.add(new mxPoint(x, y2));
-            listSimpleRoute.add(p2);
+            if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
+                listSimpleRoute.add(p2);
+            }
             return listSimpleRoute;
         }
         // check the nodes in y-coordinate
@@ -402,13 +411,15 @@ public class XcosRoute {
         }
         if (listY.size() > 0) {
             double y = choosePoint(listY);
-            if (y > 0) {
+            if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
                 listSimpleRoute.add(p1);
-                listSimpleRoute.add(new mxPoint(x1, y));
-                listSimpleRoute.add(new mxPoint(x2, y));
-                listSimpleRoute.add(p2);
-                return listSimpleRoute;
             }
+            listSimpleRoute.add(new mxPoint(x1, y));
+            listSimpleRoute.add(new mxPoint(x2, y));
+            if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
+                listSimpleRoute.add(p2);
+            }
+            return listSimpleRoute;
         }
         return listSimpleRoute;
     }
@@ -452,6 +463,87 @@ public class XcosRoute {
             end = end_temp;
         }
         return (start + end) / 2;
+    }
+
+    /**
+     * Based on getSimpleRoute().
+     * 
+     * @param p1
+     *            the point away from the first port
+     * @param o1
+     *            the orientation of the first port
+     * @param p2
+     *            the point away from the second port
+     * @param o2
+     *            the orientation of the second port
+     * @param allCells
+     *            all the possible obstacles
+     * @param times
+     * @return
+     */
+    public static List<mxPoint> getComplexRoute(mxPoint p1, Orientation o1, mxPoint p2,
+            Orientation o2, Object[] allCells, int times) {
+        if (times <= 0) {
+            return null;
+        }
+        double newPosition = NORMAL_BLOCK_SIZE;
+        List<mxPoint> listComplexRoute = new ArrayList<mxPoint>(0);
+        List<mxPoint> listTmp = new ArrayList<mxPoint>(0);
+        listComplexRoute.add(p1);
+        List<mxPoint> listNewP1 = new ArrayList<mxPoint>(0);
+        if (o1 != Orientation.EAST) {
+            mxPoint np1 = new mxPoint(p1.getX() - newPosition, p1.getY());
+            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+                listTmp = getSimpleRoute(np1, Orientation.WEST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != Orientation.WEST) {
+            mxPoint np1 = new mxPoint(p1.getX() + newPosition, p1.getY());
+            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+                listTmp = getSimpleRoute(np1, Orientation.EAST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != Orientation.SOUTH) {
+            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() - newPosition);
+            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+                listTmp = getSimpleRoute(np1, Orientation.NORTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        if (o1 != Orientation.NORTH) {
+            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() + newPosition);
+            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+                listTmp = getSimpleRoute(np1, Orientation.SOUTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                listNewP1.add(np1);
+            }
+        }
+        for (mxPoint np1 : listNewP1) {
+            listTmp = getComplexRoute(np1, null, p2, o2, allCells, times - 1);
+            if (listTmp != null && listTmp.size() > 1) {
+                listComplexRoute.addAll(listTmp);
+                return listComplexRoute;
+            }
+        }
+        listComplexRoute.clear();
+        return listComplexRoute;
     }
 
 }

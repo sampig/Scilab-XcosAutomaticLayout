@@ -201,9 +201,16 @@ public class StyleOptimalAction extends StyleAction {
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
+        } else {
+            list = XcosRoute.getComplexRoute(sourcePoint, sourcePortOrien, targetPoint,
+                    targetPortOrien, allCells, XcosRoute.TRY_TIMES);
+            if (list != null && list.size() > 0) {
+                listRoute.addAll(list);
+                return true;
+            }
         }
-        listRoute.add(sourcePoint);
-        listRoute.add(targetPoint);
+        // listRoute.add(sourcePoint);
+        // listRoute.add(targetPoint);
         return false;
     }
 
