@@ -115,6 +115,11 @@ public class StyleOptimalAction extends StyleAction {
             if (isGetRoute) {
                 List<mxPoint> list = new ArrayList<mxPoint>(0);
                 list.addAll(listRoute);
+                double scale = graph.getView().getScale();
+                for (mxPoint p : list) {
+                    p.setX(p.getX() / scale);
+                    p.setY(p.getY() / scale);
+                }
                 mxGeometry geometry = new mxGeometry();
                 geometry.setPoints(list);
                 ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
