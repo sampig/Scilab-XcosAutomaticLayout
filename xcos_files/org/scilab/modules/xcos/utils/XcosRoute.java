@@ -32,7 +32,7 @@ public abstract class XcosRoute {
     /**
      * The distance for a point away to the port.
      */
-    public final static double BEAUTY_AWAY_DISTANCE = 15;
+    public final static double BEAUTY_AWAY_DISTANCE = 20;
     public final static double BEAUTY_AWAY_REVISION = 10;
 
     /**
@@ -148,6 +148,7 @@ public abstract class XcosRoute {
     }
 
     /**
+     * Check whether a point is in one of the lines.
      * 
      * @param x
      *            the x-coordinate of the point
@@ -172,15 +173,44 @@ public abstract class XcosRoute {
                             double x2 = point2.getX();
                             double y2 = point2.getY();
                             if (x1 == x2 && x != x1) {
-                                return false;
+                                continue;
                             }
                             if (y1 == y2 && y != y1) {
-                                return false;
+                                continue;
                             }
                             if (pointInLine(x, y, x1, y1, x2, y2)) {
                                 return true;
                             }
                         }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether a point is in one of the blocks.
+     * 
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param allCells
+     * @return <b>true</b> if one point is in one block.
+     */
+    public static boolean checkPointInBlocks(double x, double y, Object[] allCells) {
+        for (Object o : allCells) {
+            if (o instanceof mxCell) {
+                mxCell block = (mxCell) o;
+                if (!block.isEdge()) {
+                    double blockx = block.getGeometry().getX();
+                    double blocky = block.getGeometry().getY();
+                    double width = block.getGeometry().getWidth();
+                    double height = block.getGeometry().getHeight();
+                    if (x >= blockx && x <= (blockx + width) && y >= blocky
+                            && y < (blocky + height)) {
+                        return true;
                     }
                 }
             }
@@ -493,7 +523,7 @@ public abstract class XcosRoute {
         List<mxPoint> listNewP1 = new ArrayList<mxPoint>(0);
         if (o1 != Orientation.EAST) {
             mxPoint np1 = new mxPoint(p1.getX() - newPosition, p1.getY());
-            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
                 listTmp = getSimpleRoute(np1, Orientation.WEST, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
@@ -504,7 +534,7 @@ public abstract class XcosRoute {
         }
         if (o1 != Orientation.WEST) {
             mxPoint np1 = new mxPoint(p1.getX() + newPosition, p1.getY());
-            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
                 listTmp = getSimpleRoute(np1, Orientation.EAST, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
@@ -515,7 +545,7 @@ public abstract class XcosRoute {
         }
         if (o1 != Orientation.SOUTH) {
             mxPoint np1 = new mxPoint(p1.getX(), p1.getY() - newPosition);
-            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
                 listTmp = getSimpleRoute(np1, Orientation.NORTH, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
@@ -526,7 +556,7 @@ public abstract class XcosRoute {
         }
         if (o1 != Orientation.NORTH) {
             mxPoint np1 = new mxPoint(p1.getX(), p1.getY() + newPosition);
-            if(!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
+            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
                 listTmp = getSimpleRoute(np1, Orientation.SOUTH, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);

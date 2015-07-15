@@ -75,9 +75,12 @@ public class StyleOptimalAction extends StyleAction {
         graph.getModel().beginUpdate();
         try {
             // graph.setCellStyle(null, links);
+            double scale = graph.getView().getScale();
+            graph.getView().setScale(1.0);
             graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", links);
             reset(graph, links);
             this.updateLinkOptimal(graph, links);
+            graph.getView().setScale(scale);
             // reset(graph, links);
         } finally {
             graph.getModel().endUpdate();
@@ -166,7 +169,7 @@ public class StyleOptimalAction extends StyleAction {
                 srcx = state.getCenterX();
                 srcy = state.getCenterY();
                 BasicPort sourcePort = (BasicPort) sourceCell;
-                sourcePoint = this.getPointAwayPort(sourcePort, graph);
+                sourcePoint = this.getPointAwayPort(sourcePort, allCells, graph);
                 sourcePortOrien = getPortRelativeOrientation(sourcePort, graph);
             }
         }
@@ -184,7 +187,7 @@ public class StyleOptimalAction extends StyleAction {
                 tgtx = state.getCenterX();
                 tgty = state.getCenterY();
                 BasicPort targetPort = (BasicPort) targetCell;
-                targetPoint = this.getPointAwayPort(targetPort, graph);
+                targetPoint = this.getPointAwayPort(targetPort, allCells, graph);
                 targetPortOrien = getPortRelativeOrientation(targetPort, graph);
             }
         }
@@ -227,13 +230,14 @@ public class StyleOptimalAction extends StyleAction {
      * @param graph
      * @return
      */
-    protected mxPoint getPointAwayPort(BasicPort port, XcosDiagram graph) {
+    protected mxPoint getPointAwayPort(BasicPort port, Object[] allCells, XcosDiagram graph) {
         double portx = graph.getView().getState(port).getCenterX();
         double porty = graph.getView().getState(port).getCenterY();
         mxPoint point = new mxPoint(portx, porty);
         double distance = XcosRoute.BEAUTY_AWAY_DISTANCE;
-        if (XcosRoute.checkPointInLines(portx, porty, allChildCells)
-                && distance > XcosRoute.BEAUTY_AWAY_REVISION) {
+        if (distance > XcosRoute.BEAUTY_AWAY_REVISION
+                && (XcosRoute.checkPointInLines(portx, porty, allChildCells) 
+                        || XcosRoute.checkPointInBlocks(portx, porty, allCells))) {
             distance -= XcosRoute.BEAUTY_AWAY_REVISION;
         }
         switch (getPortRelativeOrientation(port, graph)) {
