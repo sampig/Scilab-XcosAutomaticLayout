@@ -1,579 +1,236 @@
-/*
- * Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
- * Copyright (C) 2015 - Chenfeng ZHU
- * 
- */
 package org.scilab.modules.xcos.utils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import org.scilab.modules.xcos.block.SplitBlock;
+import org.scilab.modules.xcos.graph.XcosDiagram;
+import org.scilab.modules.xcos.link.BasicLink;
+import org.scilab.modules.xcos.port.BasicPort;
 import org.scilab.modules.xcos.port.Orientation;
 
-import com.mxgraph.model.mxCell;
+import com.mxgraph.model.mxGeometry;
+import com.mxgraph.model.mxGraphModel;
+import com.mxgraph.model.mxICell;
 import com.mxgraph.util.mxPoint;
+import com.mxgraph.view.mxCellState;
 
-/**
- * Provide methods to calculate the route.
- *
- */
-public abstract class XcosRoute {
+public class XcosRoute {
 
-    /**
-     * The error which can be accepted as it is aligned.
-     */
-    public final static double ALIGN_ERROR = 5;
+    private List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
 
     /**
-     * The error which can be accepted as it is aligned strictly.
-     */
-    public final static double ALIGN_STRICT_ERROR = 0.01;
-
-    /**
-     * The distance for a point away to the port.
-     */
-    public final static double BEAUTY_AWAY_DISTANCE = 20;
-    public final static double BEAUTY_AWAY_REVISION = 10;
-
-    /**
-     * Define a normal half size of block to avoid.
-     */
-    public final static double NORMAL_BLOCK_SIZE = 40;
-
-    /**
-     * Times trying to find a complex route.
-     */
-    public final static int TRY_TIMES = 3;
-
-    /**
-     * Check whether the two points are aligned(vertical or horizontal) or not
-     * (Considering the acceptable error - <code>XcosRoute.ALIGN_ERROR</code>).
+     * Update the Edge.
      * 
-     * @param point1
-     *            the first point
-     * @param point2
-     *            the second point
-     * @return <b>true</b> if two points are aligned.
+     * @param link
+     * @param graph
      */
-    public static boolean isAligned(mxPoint point1, mxPoint point2) {
-        double x1 = point1.getX();
-        double y1 = point1.getY();
-        double x2 = point2.getX();
-        double y2 = point2.getY();
-        return isAligned(x1, y1, x2, y2);
-    }
-
-    /**
-     * Check whether the two points are aligned(vertical or horizontal) or not
-     * (Considering the acceptable error - <code>XcosRoute.ALIGN_ERROR</code>).
-     * 
-     * @param x1
-     *            the x-coordinate of the first point
-     * @param y1
-     *            the y-coordinate of the first point
-     * @param x2
-     *            the x-coordinate of the second point
-     * @param y2
-     *            the y-coordinate of the second point
-     * @return <b>true</b> if two points are aligned.
-     */
-    public static boolean isAligned(double x1, double y1, double x2, double y2) {
-        double error = XcosRoute.ALIGN_ERROR;
-        if (Math.abs(x2 - x1) < error) {
-            return true;
-        }
-        if (Math.abs(y2 - y1) < error) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Check whether the two points are strictly aligned(vertical or horizontal)
-     * or not. (The accepted error is <code>XcosRoute.ALIGN_STRICT_ERROR</code>)
-     * 
-     * @param x1
-     *            the x-coordinate of the first point
-     * @param y1
-     *            the y-coordinate of the first point
-     * @param x2
-     *            the x-coordinate of the second point
-     * @param y2
-     *            the y-coordinate of the second point
-     * @return <b>true</b> if two points are aligned.
-     */
-    public static boolean isStrictlyAligned(double x1, double y1, double x2, double y2) {
-        double error = XcosRoute.ALIGN_STRICT_ERROR;
-        if (Math.abs(x2 - x1) < error) {
-            return true;
-        }
-        if (Math.abs(y2 - y1) < error) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Check whether there are blocks between two points.
-     * 
-     * @param x1
-     *            the x-coordinate of the first point of the line
-     * @param y1
-     *            the y-coordinate of the first point of the line
-     * @param x2
-     *            the x-coordinate of the second point of the line
-     * @param y2
-     *            the y-coordinate of the second point of the line
-     * @param allCells
-     * @return <b>true</b> if there is at least one blocks in the line.
-     */
-    public static boolean checkObstacle(double x1, double y1, double x2, double y2,
-            Object[] allCells) {
-        for (Object o : allCells) {
-            if (o instanceof mxCell) {
-                mxCell c = (mxCell) o;
-                if (c.isEdge()) {
-                    if (checkLinesCoincide(x1, y1, x2, y2, c)) {
-                        return true;
-                    }
-                } else {
-                    mxPoint interction = c.getGeometry().intersectLine(x1, y1, x2, y2);
-                    if (interction != null) {
-                        return true;
-                    }
-                }
+    public void updateRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
+        mxICell sourceCell = link.getSource();
+        mxICell targetCell = link.getTarget();
+        Object[] allOtherCells = getAllOtherCells(allCells, link, sourceCell, targetCell);
+        if (sourceCell != null && targetCell != null) {
+            boolean isGetRoute = this.computeRoute(link, allOtherCells, graph);
+            if (isGetRoute) {
+                List<mxPoint> list = new ArrayList<mxPoint>(0);
+                list.addAll(listRoute);
+                mxGeometry geometry = new mxGeometry();
+                geometry.setPoints(list);
+                ((mxGraphModel) (graph.getModel())).setGeometry(link, geometry);
+                listRoute.clear();
+            } else {
+                // if it cannot get the route, keep the same or change it to
+                // straight or give a pop windows to inform user.
             }
         }
-        return false;
     }
 
     /**
-     * Check whether a point is in one of the lines.
+     * Get the turning points for the optimal route. If the straight route is the optimal route,
+     * return null.
      * 
-     * @param x
-     *            the x-coordinate of the point
-     * @param y
-     *            the y-coordinate of the point
+     * @param link
      * @param allCells
-     * @return <b>true</b> if one point is in at least one line.
+     * @return list of turning points
      */
-    public static boolean checkPointInLines(double x, double y, Object[] allCells) {
-        for (Object o : allCells) {
-            if (o instanceof mxCell) {
-                mxCell edge = (mxCell) o;
-                if (edge.isEdge()) {
-                    List<mxPoint> listPoints = edge.getGeometry().getPoints();
-                    if (listPoints == null || listPoints.size() <= 1) {
-                    } else {
-                        for (int i = 1; i < listPoints.size(); i++) {
-                            mxPoint point1 = listPoints.get(i - 1);
-                            mxPoint point2 = listPoints.get(i);
-                            double x1 = point1.getX();
-                            double y1 = point1.getY();
-                            double x2 = point2.getX();
-                            double y2 = point2.getY();
-                            if (x1 == x2 && x != x1) {
-                                continue;
-                            }
-                            if (y1 == y2 && y != y1) {
-                                continue;
-                            }
-                            if (pointInLine(x, y, x1, y1, x2, y2)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check whether a point is in one of the blocks.
-     * 
-     * @param x
-     *            the x-coordinate of the point
-     * @param y
-     *            the y-coordinate of the point
-     * @param allCells
-     * @return <b>true</b> if one point is in one block.
-     */
-    public static boolean checkPointInBlocks(double x, double y, Object[] allCells) {
-        for (Object o : allCells) {
-            if (o instanceof mxCell) {
-                mxCell block = (mxCell) o;
-                if (!block.isEdge()) {
-                    double blockx = block.getGeometry().getX();
-                    double blocky = block.getGeometry().getY();
-                    double width = block.getGeometry().getWidth();
-                    double height = block.getGeometry().getHeight();
-                    if (x >= blockx && x <= (blockx + width) && y >= blocky
-                            && y < (blocky + height)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check whether two lines coincide or not. The lines are vertical or
-     * horizontal. <br/>
-     * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
-     * 
-     * @param x1
-     *            the x-coordinate of the first point of the first line
-     * @param y1
-     *            the y-coordinate of the first point of the first line
-     * @param x2
-     *            the x-coordinate of the second point of the first line
-     * @param y2
-     *            the y-coordinate of the second point of the first line
-     * @param edge
-     *            the second line
-     * @return <b>true</b> if two lines coincide completely or partly.
-     */
-    private static boolean checkLinesCoincide(double x1, double y1, double x2, double y2,
-            mxCell edge) {
-        if (edge.isVertex()) {
+    public boolean computeRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
+        listRoute.clear();
+        mxICell sourceCell = link.getSource();
+        mxICell targetCell = link.getTarget();
+        // if the link is not connected with BasicPort.
+        if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)) {
+            // if ((!(sourceCell instanceof BasicPort) && !(sourceCell
+            // instanceof SplitBlock))
+            // || (!(targetCell instanceof BasicPort) && !(targetCell instanceof
+            // SplitBlock))) {
             return false;
         }
-        // mxICell source = line.getSource();
-        // mxICell target = line.getTarget();
-        List<mxPoint> listPoints = edge.getGeometry().getPoints();
-        if (listPoints == null || listPoints.size() == 0) {
-            // if the edge is straight or vertical or horizontal style, there is
-            // no way to check.
-        } else if (listPoints.size() == 1) {
-        } else {
-            for (int i = 1; i < listPoints.size(); i++) {
-                mxPoint point3 = listPoints.get(i - 1);
-                mxPoint point4 = listPoints.get(i);
-                double x3 = point3.getX();
-                double y3 = point3.getY();
-                double x4 = point4.getX();
-                double y4 = point4.getY();
-                if (x1 == x2) {
-                    if (x3 != x1 || x4 != x1) {
-                        return false;
-                    }
-                }
-                if (y1 == y2) {
-                    if (y3 != y1 || y4 != y1) {
-                        return false;
-                    }
-                }
-                if (linesCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
-                    return true;
-                }
+        Orientation sourcePortOrien = null;
+        Orientation targetPortOrien = null;
+        double srcx = 0;
+        double srcy = 0;
+        double tgtx = 0;
+        double tgty = 0;
+        mxPoint sourcePoint = new mxPoint(srcx, srcy);
+        mxPoint targetPoint = new mxPoint(tgtx, tgty);
+        // if source is a port, get a new start point.
+        if (sourceCell instanceof BasicPort) {
+            mxCellState state = graph.getView().getState(sourceCell);
+            if (state != null) {
+                srcx = state.getCenterX();
+                srcy = state.getCenterY();
+                BasicPort sourcePort = (BasicPort) sourceCell;
+                sourcePoint = this.getPointAwayPort(sourcePort, allCells, graph);
+                sourcePortOrien = getPortRelativeOrientation(sourcePort, graph);
             }
         }
-        return false;
-    }
-
-    /**
-     * Check whether two lines coincide or not.
-     * 
-     * @param x1
-     *            the x-coordinate of the first point of the first line
-     * @param y1
-     *            the y-coordinate of the first point of the first line
-     * @param x2
-     *            the x-coordinate of the second point of the first line
-     * @param y2
-     *            the y-coordinate of the second point of the first line
-     * @param x3
-     *            the x-coordinate of the first point of the second line
-     * @param y3
-     *            the y-coordinate of the first point of the second line
-     * @param x4
-     *            the x-coordinate of the second point of the second line
-     * @param y4
-     *            the y-coordinate of the second point of the second line
-     * @return <b>true</b> if two lines coincide.
-     */
-    private static boolean linesCoincide(double x1, double y1, double x2, double y2,
-            double x3, double y3, double x4, double y4) {
-        // the first line is inside the second line.
-        if (pointInLine(x1, y1, x3, y3, x4, y4) && pointInLine(x2, y2, x3, y3, x4, y4)) {
+        // if source is a SplitBlock
+        if (sourceCell.getParent() instanceof SplitBlock) {
+            srcx = sourceCell.getParent().getGeometry().getCenterX();
+            srcy = sourceCell.getParent().getGeometry().getCenterY();
+            sourcePoint.setX(srcx);
+            sourcePoint.setY(srcy);
+        }
+        // if target is a port, get a new end point.
+        if (targetCell instanceof BasicPort) {
+            mxCellState state = graph.getView().getState(targetCell);
+            if (state != null) {
+                tgtx = state.getCenterX();
+                tgty = state.getCenterY();
+                BasicPort targetPort = (BasicPort) targetCell;
+                targetPoint = this.getPointAwayPort(targetPort, allCells, graph);
+                targetPortOrien = getPortRelativeOrientation(targetPort, graph);
+            }
+        }
+        // if target is a SplitBlock
+        if (targetCell.getParent() instanceof SplitBlock) {
+            tgtx = targetCell.getParent().getGeometry().getCenterX();
+            tgty = targetCell.getParent().getGeometry().getCenterY();
+            targetPoint.setX(tgtx);
+            targetPoint.setY(tgty);
+        }
+        // if two ports are aligned and there are no blocks between them,
+        // use straight route.
+        if ((XcosRouteUtils.isStrictlyAligned(srcx, srcy, tgtx, tgty))
+                && !XcosRouteUtils.checkObstacle(srcx, srcy, tgtx, tgty, allCells)) {
             return true;
         }
-        // the second line is inside the first line.
-        if (pointInLine(x3, y3, x1, y1, x2, y2) && pointInLine(x4, y4, x1, y1, x2, y2)) {
+        List<mxPoint> list = XcosRouteUtils.getSimpleRoute(sourcePoint, sourcePortOrien, targetPoint,
+                targetPortOrien, allCells);
+        if (list != null && list.size() > 0) {
+            listRoute.addAll(list);
             return true;
-        }
-        double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-        // two lines are parallel.
-        if (i == 0) {
-            if (pointInLine(x1, y1, x3, y3, x4, y4) || pointInLine(x2, y2, x3, y3, x4, y4)
-                    || pointInLine(x3, y3, x1, y1, x2, y2)
-                    || pointInLine(x4, y4, x1, y1, x2, y2)) {
+        } else {
+            list = XcosRouteUtils.getComplexRoute(sourcePoint, sourcePortOrien, targetPoint, targetPortOrien,
+                    allCells, XcosRouteUtils.TRY_TIMES);
+            if (list != null && list.size() > 0) {
+                listRoute.addAll(list);
                 return true;
             }
         }
+        // listRoute.add(sourcePoint);
+        // listRoute.add(targetPoint);
         return false;
     }
 
     /**
-     * Check whether the point is in the line segment or not.
+     * According to the relative position (orientation) of the port, get a point which is
+     * XcosRoute.BEAUTY_DISTANCE away from the port and out of block.
      * 
-     * @param x1
-     *            the x-coordinate of the point
-     * @param y1
-     *            the y-coordinate of the point
-     * @param x2
-     *            the x-coordinate of the first point of the line
-     * @param y2
-     *            the y-coordinate of the first point of the line
-     * @param x3
-     *            the x-coordinate of the second point of the line
-     * @param y3
-     *            the y-coordinate of the second point of the line
-     * @return <b>true</b> if the point is in the line segment.
+     * @param port
+     * @param graph
+     * @return
      */
-    private static boolean pointInLine(double x1, double y1, double x2, double y2, double x3,
-            double y3) {
-        double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
-        double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
-        if (l23 == (l12 + l13)) {
-            return true;
+    protected mxPoint getPointAwayPort(BasicPort port, Object[] allCells, XcosDiagram graph) {
+        double portX = graph.getView().getState(port).getCenterX();
+        double portY = graph.getView().getState(port).getCenterY();
+        mxPoint point = new mxPoint(portX, portY);
+        double distance = XcosRouteUtils.BEAUTY_AWAY_DISTANCE;
+        switch (getPortRelativeOrientation(port, graph)) {
+        // switch (port.getOrientation()) {
+        case EAST:
+            point.setX(point.getX() + distance);
+            while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                point.setX(point.getX() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
+            }
+            break;
+        case SOUTH:
+            point.setY(point.getY() + distance);
+            while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                point.setY(point.getY() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
+            }
+            break;
+        case WEST:
+            point.setX(point.getX() - distance);
+            while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                point.setX(point.getX() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
+            }
+            break;
+        case NORTH:
+            point.setY(point.getY() - distance);
+            while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                point.setY(point.getY() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
+            }
+            break;
         }
-        return false;
+        return point;
     }
 
     /**
-     * In the method, only 4 turning points at most are supported.
+     * As BasicPort.getOrientation is the default orientation, the Orientation is not correct when
+     * the block is mirrored or flipped. This method could get the current Orientation of the port.
      * 
-     * @param p1
-     *            the point away from the first port
-     * @param p2
-     *            the point away from the second port
-     * @param allCells
-     *            all the possible
+     * @param port
      * @return
      */
-    public static List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
-        return getSimpleRoute(p1, null, p2, null, allCells);
+    protected Orientation getPortRelativeOrientation(BasicPort port, XcosDiagram graph) {
+        // the coordinate (x,y) for the port.
+        double portx = graph.getView().getState(port).getCenterX();
+        double porty = graph.getView().getState(port).getCenterY();
+        // the coordinate (x,y) and the width-height for the parent block
+        mxICell parent = port.getParent();
+        double blockx = graph.getView().getState(parent).getCenterX();
+        double blocky = graph.getView().getState(parent).getCenterY();
+        double blockw = parent.getGeometry().getWidth();
+        double blockh = parent.getGeometry().getHeight();
+        // calculate relative coordinate based on the center of parent block.
+        portx -= blockx;
+        porty -= blocky;
+        Orientation orientation = port.getOrientation();
+        if ((portx) >= blockw * Math.abs(porty) / blockh) { // x>=w*|y|/h
+            orientation = Orientation.EAST;
+        } else if (porty >= blockh * Math.abs(portx) / blockw) { // y>=h*|x|/w
+            orientation = Orientation.SOUTH;
+        } else if (portx <= -blockw * Math.abs(porty) / blockh) { // x<=-w*|y|/h
+            orientation = Orientation.WEST;
+        } else if (porty <= -blockh * Math.abs(portx) / blockw) { // y<=-h*|x|/w
+            orientation = Orientation.NORTH;
+        }
+        return orientation;
     }
 
     /**
-     * In the method, only 4 turning points at most are supported.
+     * Remove the selves from the array of all. Remove all SplitBlock.
      * 
-     * @param p1
-     *            the point away from the first port
-     * @param o1
-     *            the orientation of the first port
-     * @param p2
-     *            the point away from the second port
-     * @param o2
-     *            the orientation of the second port
-     * @param allCells
-     *            all the possible
-     * @return
+     * @param all
+     * @param self
+     * @return a new array of all objects excluding selves
      */
-    public static List<mxPoint> getSimpleRoute(mxPoint p1, Orientation o1, mxPoint p2,
-            Orientation o2, Object[] allCells) {
-        // point1 and point2 are not in the vertical or horizontal line.
-        List<mxPoint> listSimpleRoute = new ArrayList<mxPoint>(0);
-        List<Double> listX = new ArrayList<Double>(0);
-        List<Double> listY = new ArrayList<Double>(0);
-        double distance = XcosRoute.NORMAL_BLOCK_SIZE;
-        double x1 = p1.getX();
-        double y1 = p1.getY();
-        double x2 = p2.getX();
-        double y2 = p2.getY();
-        // simplest situation
-        if (!checkObstacle(x1, y1, x2, y1, allCells)
-                && !checkObstacle(x2, y1, x2, y2, allCells)) {
-            if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
-                listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x2, y1));
-            if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        } else if (!checkObstacle(x1, y1, x1, y2, allCells)
-                && !checkObstacle(x1, y2, x2, y2, allCells)) {
-            if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
-                listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x1, y2));
-            if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        }
-        // check the nodes in x-coordinate
-        double xmax = Math.max(x1 + distance, x2 + distance);
-        double xmin = Math.min(x1 - distance, x2 - distance);
-        for (double xi = xmin; xi <= xmax; xi++) {
-            if (!checkObstacle(x1, y1, xi, y1, allCells)
-                    && !checkObstacle(xi, y1, xi, y2, allCells)
-                    && !checkObstacle(xi, y2, x2, y2, allCells)) {
-                listX.add(xi);
+    protected Object[] getAllOtherCells(Object[] all, Object... self) {
+        List<Object> listme = Arrays.asList(self);
+        List<Object> listnew = new ArrayList<Object>(0);
+        for (Object o : all) {
+            if (!listme.contains(o) && !(o instanceof SplitBlock)) { //
+                listnew.add(o);
             }
         }
-        if (listX.size() > 0) {
-            double x = choosePoint(listX);
-            if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
-                listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x, y1));
-            listSimpleRoute.add(new mxPoint(x, y2));
-            if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        }
-        // check the nodes in y-coordinate
-        double ymax = Math.max(y1 + distance, y2 + distance);
-        double ymin = Math.min(y1 - distance, y2 - distance);
-        for (double yi = ymin; yi <= ymax; yi++) {
-            if (!checkObstacle(x1, y1, x1, yi, allCells)
-                    && !checkObstacle(x1, yi, x2, yi, allCells)
-                    && !checkObstacle(x2, yi, x2, y2, allCells)) {
-                listY.add(yi);
-            }
-        }
-        if (listY.size() > 0) {
-            double y = choosePoint(listY);
-            if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
-                listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x1, y));
-            listSimpleRoute.add(new mxPoint(x2, y));
-            if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        }
-        return listSimpleRoute;
-    }
-
-    /**
-     * Choose a better point (which is the average number in the widest range in
-     * a certain density) from the list which contains discrete numbers.
-     * 
-     * @param list
-     * @return
-     */
-    private static double choosePoint(List<Double> list) {
-        if (list == null || list.size() == 0) {
-            return 0;
-        }
-        double start = list.get(0);
-        double start_temp = list.get(0);
-        double end = list.get(0);
-        double end_temp = list.get(0);
-        int counter = 1;
-        for (int i = 1; i < list.size(); i++) {
-            if (Math.abs(list.get(i) - list.get(i - 1)) <= 1.1) {
-                end_temp = list.get(i);
-                counter++;
-            } else {
-                if (counter == 1) {
-                    start_temp = list.get(i);
-                    continue;
-                }
-                if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
-                    start = start_temp;
-                    end = end_temp;
-                    start_temp = list.get(i);
-                    end_temp = list.get(i);
-                    counter = 1;
-                }
-            }
-        }
-        if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
-            start = start_temp;
-            end = end_temp;
-        }
-        return (start + end) / 2;
-    }
-
-    /**
-     * Based on getSimpleRoute().
-     * 
-     * @param p1
-     *            the point away from the first port
-     * @param o1
-     *            the orientation of the first port
-     * @param p2
-     *            the point away from the second port
-     * @param o2
-     *            the orientation of the second port
-     * @param allCells
-     *            all the possible obstacles
-     * @param times
-     * @return
-     */
-    public static List<mxPoint> getComplexRoute(mxPoint p1, Orientation o1, mxPoint p2,
-            Orientation o2, Object[] allCells, int times) {
-        if (times <= 0) {
-            return null;
-        }
-        double newPosition = NORMAL_BLOCK_SIZE;
-        List<mxPoint> listComplexRoute = new ArrayList<mxPoint>(0);
-        List<mxPoint> listTmp = new ArrayList<mxPoint>(0);
-        listComplexRoute.add(p1);
-        List<mxPoint> listNewP1 = new ArrayList<mxPoint>(0);
-        if (o1 != Orientation.EAST) {
-            mxPoint np1 = new mxPoint(p1.getX() - newPosition, p1.getY());
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.WEST, p2, o2, allCells);
-                if (listTmp != null && listTmp.size() > 0) {
-                    listComplexRoute.addAll(listTmp);
-                    return listComplexRoute;
-                }
-                listNewP1.add(np1);
-            }
-        }
-        if (o1 != Orientation.WEST) {
-            mxPoint np1 = new mxPoint(p1.getX() + newPosition, p1.getY());
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.EAST, p2, o2, allCells);
-                if (listTmp != null && listTmp.size() > 0) {
-                    listComplexRoute.addAll(listTmp);
-                    return listComplexRoute;
-                }
-                listNewP1.add(np1);
-            }
-        }
-        if (o1 != Orientation.SOUTH) {
-            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() - newPosition);
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.NORTH, p2, o2, allCells);
-                if (listTmp != null && listTmp.size() > 0) {
-                    listComplexRoute.addAll(listTmp);
-                    return listComplexRoute;
-                }
-                listNewP1.add(np1);
-            }
-        }
-        if (o1 != Orientation.NORTH) {
-            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() + newPosition);
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.SOUTH, p2, o2, allCells);
-                if (listTmp != null && listTmp.size() > 0) {
-                    listComplexRoute.addAll(listTmp);
-                    return listComplexRoute;
-                }
-                listNewP1.add(np1);
-            }
-        }
-        for (mxPoint np1 : listNewP1) {
-            listTmp = getComplexRoute(np1, null, p2, o2, allCells, times - 1);
-            if (listTmp != null && listTmp.size() > 1) {
-                listComplexRoute.addAll(listTmp);
-                return listComplexRoute;
-            }
-        }
-        listComplexRoute.clear();
-        return listComplexRoute;
+        Object[] newAll = listnew.toArray();
+        return newAll;
     }
 
 }
