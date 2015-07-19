@@ -1,15 +1,12 @@
-package org.zhuchenf.demo;
+package org.zhuchenf.demo.utils;
 
-import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-
-import org.scilab.modules.graph.ScilabComponent;
 import org.scilab.modules.graph.ScilabGraph;
+import org.zhuchenf.demo.MyConstants;
 import org.zhuchenf.demo.MyConstants.MyOrientation;
 
 import com.mxgraph.model.mxCell;
@@ -18,90 +15,11 @@ import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxPoint;
+import com.mxgraph.util.mxUtils;
 
-public class ChangeAction extends AbstractAction {
-
-    private static final long serialVersionUID = 7661628580051142609L;
-
-    private ScilabGraph graph;
+public class RouteUtils {
 
     private List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
-
-    public ChangeAction() {
-        super();
-    }
-
-    public ChangeAction(String name, ScilabGraph graph) {
-        super(name);
-        this.graph = graph;
-    }
-
-    public void actionPerformed(ActionEvent e) {
-        Object s = e.getSource();
-        if (s instanceof ScilabComponent) {
-            String name = getValue(Action.NAME).toString();
-            Object[] cells = graph.getSelectionCells(); // .getSelectionModel().getCells()
-            if ("Straight".equalsIgnoreCase(name)) {
-                this.updateLinkStraight(cells);
-            } else if ("Horizontal".equalsIgnoreCase(name)) {
-                this.updateLinkHorizontal(cells);
-            } else if ("Optimal".equalsIgnoreCase(name)) {
-                graph.getModel().beginUpdate();
-                try {
-                    graph.setCellStyle(null, cells);
-                    this.updateLinkOptimal(cells);
-                } finally {
-                    graph.getModel().endUpdate();
-                }
-            }
-        }
-    }
-
-    public void updateLinkStraight(Object[] cells) {
-        graph.getModel().beginUpdate();
-        try {
-            graph.resetEdges(cells);
-            // mxStylesheet style = graph.getStylesheet();
-            // graph.setCellStyle(style.getDefaultEdgeStyle().toString(),
-            // cells);
-            graph.setCellStyle(null, cells);
-            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", cells);
-            for (Object edge : cells) {
-                graph.resetEdge(edge);
-            }
-            // graph.resetEdges(cells);
-        } finally {
-            graph.getModel().endUpdate();
-        }
-    }
-
-    public void updateLinkHorizontal(Object[] cells) {
-        graph.getModel().beginUpdate();
-        try {
-            graph.resetEdges(cells);
-            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "0", cells);
-            graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW, cells);
-            graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL, cells);
-            // System.out.println(((mxCell)
-            // cells[0]).getGeometry().getPoints().size());
-            graph.resetEdges(cells);
-        } finally {
-            graph.getModel().endUpdate();
-        }
-    }
-
-    public void updateLinkOptimal(Object[] cells) {
-        Object[] all = graph.getChildCells(graph.getDefaultParent());
-        // graph.getChildVertices(graph.getDefaultParent());
-        for (Object o : cells) {
-            if (o instanceof mxCell) {
-                mxCell c = (mxCell) o;
-                if (c.isEdge()) {
-                    this.updateRoute(c, all, graph);
-                }
-            }
-        }
-    }
 
     /**
      * Update the Edge.
@@ -109,7 +27,7 @@ public class ChangeAction extends AbstractAction {
      * @param cell
      * @param graph
      */
-    protected void updateRoute(mxCell cell, Object[] all, ScilabGraph graph) {
+    public void updateRoute(mxCell cell, Object[] all, ScilabGraph graph) {
         mxICell src = cell.getSource();
         mxICell tgt = cell.getTarget();
         Object[] allOtherCells = getAllOtherCells(all, cell, src, tgt);
@@ -120,12 +38,18 @@ public class ChangeAction extends AbstractAction {
                     + ((ps == null) ? 0 : ps.size()));
             // graph.setCellStyle(getPath(cell,all), new Object[] {cell});
             mxGeometry geometry = new mxGeometry();
-            boolean flag = computeRoute(cell, allOtherCells);
+            boolean flag = computeRoute(cell, allOtherCells, graph);
             if (flag) {
                 List<mxPoint> list = new ArrayList<mxPoint>();
                 list.addAll(listRoute);
+                // double scale = graph.getView().getScale();
+                // for (mxPoint p : list) {
+                // p.setX(p.getX() / scale);
+                // p.setY(p.getY() / scale);
+                // }
                 geometry.setPoints(list);
                 ((mxGraphModel) (graph.getModel())).setGeometry(cell, geometry);
+                System.out.println(getLinePoints(cell));
                 listRoute.clear();
             } else {
                 System.out.println("No optimal");
@@ -140,9 +64,6 @@ public class ChangeAction extends AbstractAction {
                 System.out.println("Optimal is Straight.");
             }
         }
-        double x = 250.0;
-        double y = 37.5;
-        System.out.println(checkObstacle(new mxPoint(x, y), new mxPoint(x, y), allOtherCells));
     }
 
     /**
@@ -153,7 +74,7 @@ public class ChangeAction extends AbstractAction {
      * @param allCells
      * @return list of turning points
      */
-    public boolean computeRoute(mxCell cell, Object[] allCells) {
+    public boolean computeRoute(mxCell cell, Object[] allCells, ScilabGraph graph) {
         listRoute.clear();
         mxICell src = cell.getSource();
         mxICell tgt = cell.getTarget();
@@ -166,8 +87,8 @@ public class ChangeAction extends AbstractAction {
         MyOrientation targetPortOrien = null;
         double srcx = graph.getView().getState(src).getCenterX();
         double srcy = graph.getView().getState(src).getCenterY();
-        System.out.println(srcx + "," + srcy + " ; " + src.getGeometry().getCenterX() + ","
-                + src.getGeometry().getCenterY());
+        System.out.println("source: " + srcx + "," + srcy + " ; "
+                + src.getGeometry().getCenterX() + "," + src.getGeometry().getCenterY());
         mxPoint srcp = new mxPoint(srcx, srcy);
         double tgtx = graph.getView().getState(tgt).getCenterX();
         double tgty = graph.getView().getState(tgt).getCenterY();
@@ -176,12 +97,14 @@ public class ChangeAction extends AbstractAction {
         mxPoint srcp1 = new mxPoint(srcx, srcy);
         mxPoint tgtp1 = new mxPoint(tgtx, tgty);
         if (src.getParent() != null && src.getParent() != graph.getDefaultParent()) {
-            this.getPointAwayPort(srcp1, src);
-            sourcePortOrien = this.getRelativeOrientation(src);
+            this.getPointAwayPort(srcp1, src, graph);
+            sourcePortOrien = this.getPortRelativeOrientation(src);
+            // sourcePortOrien = this.getRelativeOrientation(src, graph);
         }
         if (tgt.getParent() != null && tgt.getParent() != graph.getDefaultParent()) {
-            this.getPointAwayPort(tgtp1, tgt);
-            targetPortOrien = this.getRelativeOrientation(tgt);
+            this.getPointAwayPort(tgtp1, tgt, graph);
+            targetPortOrien = this.getPortRelativeOrientation(tgt);
+            // targetPortOrien = this.getRelativeOrientation(tgt, graph);
         }
         // if two ports are not oblique and not in the same direction,
         // use straight route.
@@ -279,7 +202,7 @@ public class ChangeAction extends AbstractAction {
             }
         }
         if (listX.size() > 0) {
-            int x = choosePoint(listX);
+            int x = choosePoint(listX, x1, x2);
             if (o1 != MyOrientation.EAST && o1 != MyOrientation.WEST) {
                 listRoute.add(p1);
             }
@@ -301,7 +224,7 @@ public class ChangeAction extends AbstractAction {
             }
         }
         if (listY.size() > 0) {
-            int y = choosePoint(listY);
+            int y = choosePoint(listY, y1, y2);
             if (o1 != MyOrientation.NORTH && o1 != MyOrientation.SOUTH) {
                 listRoute.add(p1);
             }
@@ -318,38 +241,63 @@ public class ChangeAction extends AbstractAction {
     }
 
     /**
+     * Choose the point which is in the middle of the longest continuous points.
      * 
      * @param list
+     * @param p1
+     * @param p2
      * @return
      */
-    public int choosePoint(List<Double> list) {
+    public int choosePoint(List<Double> list, double p1, double p2) {
         if (list == null || list.size() == 0) {
             return 0;
         }
+        Collections.sort(list);
+        double nMax = Math.max(p1, p2);
+        double nMin = Math.min(p1, p2);
         double start = list.get(0);
         double start_temp = list.get(0);
         double end = list.get(0);
         double end_temp = list.get(0);
-        int counter = 1;
+        boolean restart = true;
+        double tmp = (end_temp + start_temp) / 2;
+        double mid = (end + start) / 2;
         for (int i = 1; i < list.size(); i++) {
             if (Math.abs(list.get(i) - list.get(i - 1)) <= 1.1) {
                 end_temp = list.get(i);
-                counter++;
+                restart = false;
             } else {
-                if (counter == 1) {
+                if (restart) {
                     start_temp = list.get(i);
                     continue;
                 }
-                if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
+                tmp = (end_temp + start_temp) / 2;
+                mid = (end + start) / 2;
+                if ((tmp < nMin || tmp > nMax) && (mid < nMax && mid > nMin)) {
+                    // if the new one is out of two points and the previous one
+                    // is inside,
+                    start_temp = list.get(i);
+                    end_temp = list.get(i);
+                    restart = true;
+                } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
+                        || (tmp < nMax && tmp > nMin) && (mid < nMin || mid > nMax)) {
+                    // if the new one in between two points and the previous one
+                    // is out of them, or if the new one is longer than the
+                    // previous one,
                     start = start_temp;
                     end = end_temp;
                     start_temp = list.get(i);
                     end_temp = list.get(i);
-                    counter = 1;
+                    restart = true;
                 }
             }
         }
-        if (Math.abs(end_temp - start_temp) > Math.abs(end - start)) {
+        tmp = (end_temp + start_temp) / 2;
+        mid = (end + start) / 2;
+        if ((tmp < nMin || tmp > nMax) && (mid < nMax && mid > nMin)) {
+            ;
+        } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
+                || ((tmp < nMax && tmp > nMin) && (mid < nMin || mid > nMax))) {
             start = start_temp;
             end = end_temp;
         }
@@ -527,6 +475,31 @@ public class ChangeAction extends AbstractAction {
         return d;
     }
 
+    public boolean checkLinesIntersection(double x1, double y1, double x2, double y2,
+            mxCell edge) {
+        if (edge.isVertex()) {
+            return false;
+        }
+        List<mxPoint> listPoints = getLinePoints(edge);
+        if (listPoints == null || listPoints.size() <= 1) {
+            ;
+        } else {
+            for (int i = 1; i < listPoints.size(); i++) {
+                mxPoint point3 = listPoints.get(i - 1);
+                mxPoint point4 = listPoints.get(i);
+                double x3 = point3.getX();
+                double y3 = point3.getY();
+                double x4 = point4.getX();
+                double y4 = point4.getY();
+                mxPoint point = mxUtils.intersection(x1, y1, x2, y2, x3, y3, x4, y4);
+                if (point != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /**
      * Check whether two lines coincide or not. The lines are vertical or
      * horizontal. <br/>
@@ -606,19 +579,22 @@ public class ChangeAction extends AbstractAction {
     public static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3,
             double y3, double x4, double y4) {
         // the first line is inside the second line.
-        if (pointInLine(x1, y1, x3, y3, x4, y4) && pointInLine(x2, y2, x3, y3, x4, y4)) {
+        if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
+                && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
             return true;
         }
         // the second line is inside the first line.
-        if (pointInLine(x3, y3, x1, y1, x2, y2) && pointInLine(x4, y4, x1, y1, x2, y2)) {
+        if (pointInLineSegment(x3, y3, x1, y1, x2, y2)
+                && pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
             return true;
         }
         double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
         // two lines are parallel.
         if (i == 0) {
-            if (pointInLine(x1, y1, x3, y3, x4, y4) || pointInLine(x2, y2, x3, y3, x4, y4)
-                    || pointInLine(x3, y3, x1, y1, x2, y2)
-                    || pointInLine(x4, y4, x1, y1, x2, y2)) {
+            if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
+                    || pointInLineSegment(x2, y2, x3, y3, x4, y4)
+                    || pointInLineSegment(x3, y3, x1, y1, x2, y2)
+                    || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
                 return true;
             }
         }
@@ -642,12 +618,18 @@ public class ChangeAction extends AbstractAction {
      *            the y-coordinate of the second point of the line
      * @return <b>true</b> if the point is in the line segment.
      */
-    public static boolean pointInLine(double x1, double y1, double x2, double y2, double x3,
-            double y3) {
-        double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-        double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
-        double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
-        if (l23 == (l12 + l13)) {
+    public static boolean pointInLineSegment(double x1, double y1, double x2, double y2,
+            double x3, double y3) {
+        // double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 -
+        // y1));
+        // double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 -
+        // y2));
+        // double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 -
+        // y1));
+        // if (l23 == (l12 + l13)) {
+        if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2))
+                && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
+                && (y1 >= Math.min(y2, y3) && y1 <= Math.max(y2, y3))) {
             return true;
         }
         return false;
@@ -665,7 +647,7 @@ public class ChangeAction extends AbstractAction {
         double y1 = point1.getY();
         double x2 = point2.getX();
         double y2 = point2.getY();
-        double error = MyConstants.SLOPE_ERROR;
+        double error = MyConstants.ALIGN_ERROR;
         if (Math.abs(x2 - x1) < error) {
             return false;
         }
@@ -675,9 +657,10 @@ public class ChangeAction extends AbstractAction {
         return true;
     }
 
-    public void getPointAwayPort(mxPoint point, mxICell port) {
+    public void getPointAwayPort(mxPoint point, mxICell port, ScilabGraph graph) {
         double away = MyConstants.BEAUTY_AWAY_DISTANCE;
-        switch (getRelativeOrientation(port)) {
+        switch (getPortRelativeOrientation(port)) {
+        // switch (getRelativeOrientation(port, graph)) {
         case EAST:
             point.setX(point.getX() + away);
             break;
@@ -700,7 +683,7 @@ public class ChangeAction extends AbstractAction {
      * @param parent
      * @return MyOrientation
      */
-    public MyOrientation getRelativeOrientation(mxICell port) {
+    public MyOrientation getRelativeOrientation(mxICell port, ScilabGraph graph) {
         MyOrientation pos = MyConstants.MyOrientation.EAST;
         // the coordinate (x,y) for the port.
         double portx = graph.getView().getState(port).getCenterX();
@@ -747,6 +730,9 @@ public class ChangeAction extends AbstractAction {
                 mxCell c = (mxCell) o;
                 mxPoint interction = c.getGeometry().intersectLine(x0, y0, x1, y1);
                 if (c.isEdge()) {
+                    if (checkLinesIntersection(x0, y0, x1, y1, c)) {
+                        return true;
+                    }
                     if (checkLinesCoincide(x0, y0, x1, y1, c)) {
                         return true;
                     }
@@ -811,7 +797,7 @@ public class ChangeAction extends AbstractAction {
      *            the ending point
      * @return MyOrientation
      */
-    public MyOrientation getRelativeOrientation(mxPoint point1, mxPoint point2) {
+    public MyOrientation getPointRelativeOrientation(mxPoint point1, mxPoint point2) {
         MyOrientation pos = MyConstants.MyOrientation.EAST;
         double x1 = point1.getX();
         double y1 = point1.getY();
@@ -829,6 +815,96 @@ public class ChangeAction extends AbstractAction {
             pos = MyOrientation.NORTH;
         }
         return pos;
+    }
+
+    public static List<mxPoint> getLinePoints(mxCell edge) {
+        if (!edge.isEdge()) {
+            return null;
+        }
+        List<mxPoint> list = new ArrayList<mxPoint>(0);
+        mxICell source = edge.getSource();
+        mxGeometry sourceGeo = source.getGeometry();
+        double srcx = sourceGeo.getCenterX();
+        double srcy = sourceGeo.getCenterY();
+        mxICell sourceParent = source.getParent();
+        mxGeometry srcParGeo = sourceParent.getGeometry();
+        if (srcParGeo == null) {
+            srcParGeo = new mxGeometry(0, 0, 0, 0);
+        }
+        mxPoint offset = sourceGeo.getOffset();
+        if (offset == null) {
+            offset = new mxPoint(0, 0);
+        }
+        if (sourceGeo.isRelative()) {
+            srcx = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
+            srcy = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
+        } else {
+            srcx = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
+            srcy = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
+        }
+        // System.out.println("Source state: " +
+        // graph.getView().getState(source).getCenterX()
+        // + ", " + graph.getView().getState(source).getCenterY());
+        // System.out.println("Source Geo: " + srcx + ", " + srcy);
+        list.add(new mxPoint(srcx, srcy));
+        if (edge.getGeometry().getPoints() != null) {
+            list.addAll(edge.getGeometry().getPoints());
+        }
+        mxICell target = edge.getTarget();
+        mxGeometry targetGeo = target.getGeometry();
+        double tgtx = targetGeo.getCenterX();
+        double tgty = targetGeo.getCenterY();
+        mxICell targetParent = target.getParent();
+        mxGeometry tgGeo = targetParent.getGeometry();
+        if (tgGeo == null) {
+            tgGeo = new mxGeometry(0, 0, 0, 0);
+        }
+        offset = targetGeo.getOffset();
+        if (offset == null) {
+            offset = new mxPoint(0, 0);
+        }
+        if (targetGeo.isRelative()) {
+            tgtx = tgGeo.getX() + targetGeo.getX() * tgGeo.getWidth() + offset.getX();
+            tgty = tgGeo.getY() + targetGeo.getY() * tgGeo.getHeight() + offset.getY();
+        } else {
+            tgtx = tgGeo.getX() + targetGeo.getX() + offset.getX();
+            tgty = tgGeo.getY() + targetGeo.getY() + offset.getY();
+        }
+        list.add(new mxPoint(tgtx, tgty));
+        return list;
+    }
+
+    protected MyOrientation getPortRelativeOrientation(mxICell port) {
+        if (port.getParent() == null) {
+            return MyOrientation.EAST;
+        }
+        // the coordinate (x,y) for the port.
+        mxGeometry portGeo = port.getGeometry();
+        double portx = portGeo.getCenterY();
+        double porty = portGeo.getCenterY();
+        // the coordinate (x,y) and the width-height for the parent block
+        mxICell parent = port.getParent();
+        mxGeometry parentGeo = parent.getGeometry();
+        double blockw = parentGeo.getWidth();
+        double blockh = parentGeo.getHeight();
+        if (portGeo.isRelative()) {
+            portx *= blockw;
+            porty *= blockh;
+        }
+        // calculate relative coordinate based on the center of parent block.
+        portx -= blockw / 2;
+        porty -= blockh / 2;
+        MyOrientation orientation = MyOrientation.EAST;
+        if ((portx) >= blockw * Math.abs(porty) / blockh) { // x>=w*|y|/h
+            orientation = MyOrientation.EAST;
+        } else if (porty >= blockh * Math.abs(portx) / blockw) { // y>=h*|x|/w
+            orientation = MyOrientation.SOUTH;
+        } else if (portx <= -blockw * Math.abs(porty) / blockh) { // x<=-w*|y|/h
+            orientation = MyOrientation.WEST;
+        } else if (porty <= -blockh * Math.abs(portx) / blockw) { // y<=-h*|x|/w
+            orientation = MyOrientation.NORTH;
+        }
+        return orientation;
     }
 
     /**

@@ -82,12 +82,13 @@ public class MyConstants {
     /**
      * 
      */
-    public final static double SLOPE_ERROR = 5;
+    public final static double ALIGN_ERROR = 5;
 
     /**
      * 
      */
-    public final static double BEAUTY_AWAY_DISTANCE = 15;
+    public final static double BEAUTY_AWAY_DISTANCE = 20;
+    public final static double BEAUTY_AWAY_REVISION = 10;
 
     public final static double NORMAL_BLOCK_SIZE = 40;
 

@@ -32,12 +32,12 @@ import com.mxgraph.view.mxGraph;
 import com.mxgraph.view.mxStylesheet;
 
 /**
- * A simple test for Clicking to find an Optimal Route.
+ * A simple test for Clicking to order all the blocks.
  * 
  * @author Chenfeng ZHU
  *
  */
-public class OptimizeRoute extends JFrame {
+public class OrderBlock extends JFrame {
 
     private static final long serialVersionUID = 8452610294410264983L;
 
@@ -48,13 +48,11 @@ public class OptimizeRoute extends JFrame {
     private Random r = new Random(System.currentTimeMillis());
     private List<Object> listVertex = new ArrayList<>(0);
 
-    public OptimizeRoute() {
+    public OrderBlock() {
         super("OptimizeRoute");
 
         graph = new ScilabGraph();
         Object parent = graph.getDefaultParent();
-        System.out.println("Default Parent: " + parent);
-        System.out.println("Default Parent: " + ((mxCell) parent).getGeometry());
 
         mxStylesheet ss = graph.getStylesheet();
         Hashtable<String, Object> style = new Hashtable<>();
@@ -80,9 +78,9 @@ public class OptimizeRoute extends JFrame {
             mxCell v2 = (mxCell) graph
                     .insertVertex(parent, null, "chenfeng", 340, 120, 80, 30);
             v2.setConnectable(false);
-            mxGeometry geo2 = new mxGeometry(0, 15, 2, 2);
+            mxGeometry geo2 = new mxGeometry(0, 0.5, 2, 2);
             // geo2.setOffset(new mxPoint(0, 0));
-            geo2.setRelative(false);
+            geo2.setRelative(true);
             mxCell port2 = new mxCell("P2", geo2, "");
             port2.setVertex(true);
             graph.addCell(port2, v2);
@@ -200,7 +198,7 @@ public class OptimizeRoute extends JFrame {
     }
 
     public static void main(String... strings) {
-        OptimizeRoute frame = new OptimizeRoute();
+        OrderBlock frame = new OrderBlock();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(500, 500);
         frame.setVisible(true);
