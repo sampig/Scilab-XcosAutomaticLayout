@@ -1,8 +1,15 @@
 /*
  * Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
  * Copyright (C) 2015 - Chenfeng ZHU
- * 
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
+ *
  */
+
 package org.scilab.modules.xcos.utils;
 
 import java.util.ArrayList;
@@ -26,11 +33,6 @@ import com.mxgraph.util.mxUtils;
 public abstract class XcosRouteUtils {
 
     /**
-     * The error which can be accepted as it is aligned.
-     */
-    public final static double ALIGN_ERROR = 5;
-
-    /**
      * The error which can be accepted as it is aligned strictly.
      */
     public final static double ALIGN_STRICT_ERROR = 0.01;
@@ -52,51 +54,8 @@ public abstract class XcosRouteUtils {
     public final static int TRY_TIMES = 3;
 
     /**
-     * Check whether the two points are aligned(vertical or horizontal) or not
-     * (Considering the acceptable error - <code>XcosRoute.ALIGN_ERROR</code>).
-     * 
-     * @param point1
-     *            the first point
-     * @param point2
-     *            the second point
-     * @return <b>true</b> if two points are aligned.
-     */
-    public static boolean isAligned(mxPoint point1, mxPoint point2) {
-        double x1 = point1.getX();
-        double y1 = point1.getY();
-        double x2 = point2.getX();
-        double y2 = point2.getY();
-        return isAligned(x1, y1, x2, y2);
-    }
-
-    /**
-     * Check whether the two points are aligned(vertical or horizontal) or not
-     * (Considering the acceptable error - <code>XcosRoute.ALIGN_ERROR</code>).
-     * 
-     * @param x1
-     *            the x-coordinate of the first point
-     * @param y1
-     *            the y-coordinate of the first point
-     * @param x2
-     *            the x-coordinate of the second point
-     * @param y2
-     *            the y-coordinate of the second point
-     * @return <b>true</b> if two points are aligned.
-     */
-    public static boolean isAligned(double x1, double y1, double x2, double y2) {
-        double error = XcosRouteUtils.ALIGN_ERROR;
-        if (Math.abs(x2 - x1) < error) {
-            return true;
-        }
-        if (Math.abs(y2 - y1) < error) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Check whether the two points are strictly aligned(vertical or horizontal)
-     * or not. (The accepted error is <code>XcosRoute.ALIGN_STRICT_ERROR</code>)
+     * Check whether the two points are strictly aligned(vertical or horizontal) or not. (The
+     * accepted error is <code>XcosRoute.ALIGN_STRICT_ERROR</code>)
      * 
      * @param x1
      *            the x-coordinate of the first point
@@ -141,10 +100,8 @@ public abstract class XcosRouteUtils {
             offset = new mxPoint(0, 0);
         }
         if (sourceGeo.isRelative()) {
-            sourceX = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth()
-                    + offset.getX();
-            sourceY = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight()
-                    + offset.getY();
+            sourceX = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
+            sourceY = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
         } else {
             sourceX = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
             sourceY = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
@@ -167,10 +124,8 @@ public abstract class XcosRouteUtils {
             offset = new mxPoint(0, 0);
         }
         if (targetGeo.isRelative()) {
-            targetX = tgtParGeo.getX() + targetGeo.getX() * tgtParGeo.getWidth()
-                    + offset.getX();
-            targetY = tgtParGeo.getY() + targetGeo.getY() * tgtParGeo.getHeight()
-                    + offset.getY();
+            targetX = tgtParGeo.getX() + targetGeo.getX() * tgtParGeo.getWidth() + offset.getX();
+            targetY = tgtParGeo.getY() + targetGeo.getY() * tgtParGeo.getHeight() + offset.getY();
         } else {
             targetX = tgtParGeo.getX() + targetGeo.getX() + offset.getX();
             targetY = tgtParGeo.getY() + targetGeo.getY() + offset.getY();
@@ -193,8 +148,7 @@ public abstract class XcosRouteUtils {
      * @param allCells
      * @return <b>true</b> if there is at least one blocks in the line.
      */
-    public static boolean checkObstacle(double x1, double y1, double x2, double y2,
-            Object[] allCells) {
+    public static boolean checkObstacle(double x1, double y1, double x2, double y2, Object[] allCells) {
         for (Object o : allCells) {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
@@ -218,77 +172,6 @@ public abstract class XcosRouteUtils {
     }
 
     /**
-     * Check whether a point is in one of the lines.
-     * 
-     * @param x
-     *            the x-coordinate of the point
-     * @param y
-     *            the y-coordinate of the point
-     * @param allCells
-     * @return <b>true</b> if one point is in at least one line.
-     */
-    public static boolean checkPointInLines(double x, double y, Object[] allCells) {
-        for (Object o : allCells) {
-            if (o instanceof mxCell) {
-                mxCell edge = (mxCell) o;
-                if (edge.isEdge()) {
-                    List<mxPoint> listPoints = edge.getGeometry().getPoints();
-                    if (listPoints == null || listPoints.size() <= 1) {
-                    } else {
-                        for (int i = 1; i < listPoints.size(); i++) {
-                            mxPoint point1 = listPoints.get(i - 1);
-                            mxPoint point2 = listPoints.get(i);
-                            double x1 = point1.getX();
-                            double y1 = point1.getY();
-                            double x2 = point2.getX();
-                            double y2 = point2.getY();
-                            if (x1 == x2 && x != x1) {
-                                continue;
-                            }
-                            if (y1 == y2 && y != y1) {
-                                continue;
-                            }
-                            if (pointInLineSegment(x, y, x1, y1, x2, y2)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check whether a point is in one of the blocks.
-     * 
-     * @param x
-     *            the x-coordinate of the point
-     * @param y
-     *            the y-coordinate of the point
-     * @param allCells
-     * @return <b>true</b> if one point is in one block.
-     */
-    public static boolean checkPointInBlocks(double x, double y, Object[] allCells) {
-        for (Object o : allCells) {
-            if (o instanceof mxCell) {
-                mxCell block = (mxCell) o;
-                if (!block.isEdge()) {
-                    double blockx = block.getGeometry().getX();
-                    double blocky = block.getGeometry().getY();
-                    double width = block.getGeometry().getWidth();
-                    double height = block.getGeometry().getHeight();
-                    if (x >= blockx && x <= (blockx + width) && y >= blocky
-                            && y < (blocky + height)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
      * Check whether two lines have intersection or not.
      * 
      * @param x1
@@ -303,8 +186,7 @@ public abstract class XcosRouteUtils {
      *            the second link
      * @return <b>true</b> if two lines have intersection(s).
      */
-    public static boolean checkLinesIntersection(double x1, double y1, double x2, double y2,
-            BasicLink link) {
+    private static boolean checkLinesIntersection(double x1, double y1, double x2, double y2, BasicLink link) {
         List<mxPoint> listPoints = getLinkPoints(link);
         if (listPoints == null || listPoints.size() <= 1) {
         } else {
@@ -325,8 +207,7 @@ public abstract class XcosRouteUtils {
     }
 
     /**
-     * Check whether two lines coincide or not. The lines are vertical or
-     * horizontal. <br/>
+     * Check whether two lines coincide or not. The lines are vertical or horizontal. <br/>
      * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
      * 
      * @param x1
@@ -341,8 +222,7 @@ public abstract class XcosRouteUtils {
      *            the second line
      * @return <b>true</b> if two lines coincide completely or partly.
      */
-    private static boolean checkLinesCoincide(double x1, double y1, double x2, double y2,
-            BasicLink link) {
+    private static boolean checkLinesCoincide(double x1, double y1, double x2, double y2, BasicLink link) {
         // mxICell source = line.getSource();
         // mxICell target = line.getTarget();
         List<mxPoint> listPoints = link.getGeometry().getPoints();
@@ -397,25 +277,21 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point of the second line
      * @return <b>true</b> if two lines coincide.
      */
-    private static boolean linesCoincide(double x1, double y1, double x2, double y2,
-            double x3, double y3, double x4, double y4) {
+    private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
+            double x4, double y4) {
         // the first line is inside the second line.
-        if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
-                && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
+        if (pointInLineSegment(x1, y1, x3, y3, x4, y4) && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
             return true;
         }
         // the second line is inside the first line.
-        if (pointInLineSegment(x3, y3, x1, y1, x2, y2)
-                && pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
+        if (pointInLineSegment(x3, y3, x1, y1, x2, y2) && pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
             return true;
         }
         double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
         // two lines are parallel.
         if (i == 0) {
-            if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
-                    || pointInLineSegment(x2, y2, x3, y3, x4, y4)
-                    || pointInLineSegment(x3, y3, x1, y1, x2, y2)
-                    || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
+            if (pointInLineSegment(x1, y1, x3, y3, x4, y4) || pointInLineSegment(x2, y2, x3, y3, x4, y4)
+                    || pointInLineSegment(x3, y3, x1, y1, x2, y2) || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
                 return true;
             }
         }
@@ -439,10 +315,8 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point of the line
      * @return <b>true</b> if the point is in the line segment.
      */
-    private static boolean pointInLineSegment(double x1, double y1, double x2, double y2,
-            double x3, double y3) {
-        if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2))
-                && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
+    private static boolean pointInLineSegment(double x1, double y1, double x2, double y2, double x3, double y3) {
+        if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2)) && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
                 && (y1 >= Math.min(y2, y3) && y1 <= Math.max(y2, y3))) {
             return true;
         }
@@ -479,8 +353,8 @@ public abstract class XcosRouteUtils {
      *            all the possible
      * @return
      */
-    public static List<mxPoint> getSimpleRoute(mxPoint p1, Orientation o1, mxPoint p2,
-            Orientation o2, Object[] allCells) {
+    public static List<mxPoint> getSimpleRoute(mxPoint p1, Orientation o1, mxPoint p2, Orientation o2,
+            Object[] allCells) {
         // point1 and point2 are not in the vertical or horizontal line.
         List<mxPoint> listSimpleRoute = new ArrayList<mxPoint>(0);
         List<Double> listX = new ArrayList<Double>(0);
@@ -491,8 +365,7 @@ public abstract class XcosRouteUtils {
         double x2 = p2.getX();
         double y2 = p2.getY();
         // simplest situation
-        if (!checkObstacle(x1, y1, x2, y1, allCells)
-                && !checkObstacle(x2, y1, x2, y2, allCells)) {
+        if (!checkObstacle(x1, y1, x2, y1, allCells) && !checkObstacle(x2, y1, x2, y2, allCells)) {
             if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
                 listSimpleRoute.add(p1);
             }
@@ -501,8 +374,7 @@ public abstract class XcosRouteUtils {
                 listSimpleRoute.add(p2);
             }
             return listSimpleRoute;
-        } else if (!checkObstacle(x1, y1, x1, y2, allCells)
-                && !checkObstacle(x1, y2, x2, y2, allCells)) {
+        } else if (!checkObstacle(x1, y1, x1, y2, allCells) && !checkObstacle(x1, y2, x2, y2, allCells)) {
             if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
                 listSimpleRoute.add(p1);
             }
@@ -516,8 +388,7 @@ public abstract class XcosRouteUtils {
         double xmax = Math.max(x1 + distance, x2 + distance);
         double xmin = Math.min(x1 - distance, x2 - distance);
         for (double xi = xmin; xi <= xmax; xi++) {
-            if (!checkObstacle(x1, y1, xi, y1, allCells)
-                    && !checkObstacle(xi, y1, xi, y2, allCells)
+            if (!checkObstacle(x1, y1, xi, y1, allCells) && !checkObstacle(xi, y1, xi, y2, allCells)
                     && !checkObstacle(xi, y2, x2, y2, allCells)) {
                 listX.add(xi);
             }
@@ -538,8 +409,7 @@ public abstract class XcosRouteUtils {
         double ymax = Math.max(y1 + distance, y2 + distance);
         double ymin = Math.min(y1 - distance, y2 - distance);
         for (double yi = ymin; yi <= ymax; yi++) {
-            if (!checkObstacle(x1, y1, x1, yi, allCells)
-                    && !checkObstacle(x1, yi, x2, yi, allCells)
+            if (!checkObstacle(x1, y1, x1, yi, allCells) && !checkObstacle(x1, yi, x2, yi, allCells)
                     && !checkObstacle(x2, yi, x2, y2, allCells)) {
                 listY.add(yi);
             }
@@ -560,8 +430,8 @@ public abstract class XcosRouteUtils {
     }
 
     /**
-     * Choose a better point (which is the average number in the widest range in
-     * a certain density) from the list which contains discrete numbers.
+     * Choose a better point (which is the average number in the widest range in a certain density)
+     * from the list which contains discrete numbers.
      * 
      * @param list
      * @return
@@ -637,8 +507,8 @@ public abstract class XcosRouteUtils {
      * @param times
      * @return
      */
-    public static List<mxPoint> getComplexRoute(mxPoint p1, Orientation o1, mxPoint p2,
-            Orientation o2, Object[] allCells, int times) {
+    public static List<mxPoint> getComplexRoute(mxPoint p1, Orientation o1, mxPoint p2, Orientation o2,
+            Object[] allCells, int times) {
         if (times <= 0) {
             return null;
         }

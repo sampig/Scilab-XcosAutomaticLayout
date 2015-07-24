@@ -1,3 +1,15 @@
+/*
+ * Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
+ * Copyright (C) 2015 - Chenfeng ZHU
+ *
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
+ *
+ */
+
 package org.scilab.modules.xcos.utils;
 
 import java.util.ArrayList;
@@ -54,16 +66,12 @@ public class XcosRoute {
      * @param allCells
      * @return list of turning points
      */
-    public boolean computeRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
+    private boolean computeRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
         listRoute.clear();
         mxICell sourceCell = link.getSource();
         mxICell targetCell = link.getTarget();
         // if the link is not connected with BasicPort.
         if (!(sourceCell instanceof BasicPort) || !(targetCell instanceof BasicPort)) {
-            // if ((!(sourceCell instanceof BasicPort) && !(sourceCell
-            // instanceof SplitBlock))
-            // || (!(targetCell instanceof BasicPort) && !(targetCell instanceof
-            // SplitBlock))) {
             return false;
         }
         Orientation sourcePortOrien = null;
@@ -142,7 +150,7 @@ public class XcosRoute {
      * @param graph
      * @return
      */
-    protected mxPoint getPointAwayPort(BasicPort port, Object[] allCells, XcosDiagram graph) {
+    private mxPoint getPointAwayPort(BasicPort port, Object[] allCells, XcosDiagram graph) {
         double portX = graph.getView().getState(port).getCenterX();
         double portY = graph.getView().getState(port).getCenterY();
         mxPoint point = new mxPoint(portX, portY);
@@ -188,7 +196,7 @@ public class XcosRoute {
      * @param port
      * @return
      */
-    protected Orientation getPortRelativeOrientation(BasicPort port, XcosDiagram graph) {
+    private Orientation getPortRelativeOrientation(BasicPort port, XcosDiagram graph) {
         // the coordinate (x,y) for the port.
         double portx = graph.getView().getState(port).getCenterX();
         double porty = graph.getView().getState(port).getCenterY();
@@ -215,18 +223,31 @@ public class XcosRoute {
     }
 
     /**
-     * Remove the selves from the array of all. Remove all SplitBlock.
+     * Remove the selves from the array of all. Remove all SplitBlock. Add the Ports.
      * 
      * @param all
      * @param self
      * @return a new array of all objects excluding selves
      */
-    protected Object[] getAllOtherCells(Object[] all, Object... self) {
+    private Object[] getAllOtherCells(Object[] all, Object... self) {
         List<Object> listme = Arrays.asList(self);
         List<Object> listnew = new ArrayList<Object>(0);
         for (Object o : all) {
-            if (!listme.contains(o) && !(o instanceof SplitBlock)) { //
+            // if it belongs to self or it is SplitBlock.
+            if (!listme.contains(o) && !(o instanceof SplitBlock)) {
                 listnew.add(o);
+                // if it is a Link, add its Ports.
+                if (o instanceof BasicLink) {
+                    BasicLink link = (BasicLink) o;
+                    if (!listnew.contains(link.getSource())
+                            && !(link.getSource().getParent() instanceof SplitBlock)) {
+                        listnew.add(link.getSource());
+                    }
+                    if (!listnew.contains(link.getTarget())
+                            && !(link.getTarget().getParent() instanceof SplitBlock)) {
+                        listnew.add(link.getTarget());
+                    }
+                }
             }
         }
         Object[] newAll = listnew.toArray();

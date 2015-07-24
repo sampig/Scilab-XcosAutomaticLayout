@@ -1,7 +1,15 @@
 /*
  * Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
  * Copyright (C) 2015 - Chenfeng ZHU
+ * 
+ * This file must be used under the terms of the CeCILL.
+ * This source file is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at
+ * http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
+ * 
  */
+
 package org.scilab.modules.xcos.link.actions;
 
 import java.awt.event.ActionEvent;
@@ -29,6 +37,12 @@ public class StyleOptimalAction extends StyleAction {
     /** Mnemonic key of the action */
     public static final int MNEMONIC_KEY = KeyEvent.VK_O;
 
+    /**
+     * Default constructor the associated graph
+     *
+     * @param scilabGraph
+     *            the graph to associate
+     */
     public StyleOptimalAction(ScilabGraph scilabGraph) {
         super(scilabGraph);
     }
@@ -42,6 +56,8 @@ public class StyleOptimalAction extends StyleAction {
     }
 
     /**
+     * Action.
+     * 
      * @param e
      * @see org.scilab.modules.xcos.link.actions.StyleAction#actionPerformed(java.awt.event.ActionEvent)
      */
@@ -59,14 +75,12 @@ public class StyleOptimalAction extends StyleAction {
 
         graph.getModel().beginUpdate();
         try {
-            // graph.setCellStyle(null, links);
             double scale = graph.getView().getScale();
             graph.getView().setScale(1.0);
             graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", links);
             reset(graph, links);
             this.updateLinkOptimal(graph, links);
             graph.getView().setScale(scale);
-            // reset(graph, links);
         } finally {
             graph.getModel().endUpdate();
         }
