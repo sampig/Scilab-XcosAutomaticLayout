@@ -54,7 +54,7 @@ public class OptimizeRoute extends JFrame {
         graph = new ScilabGraph();
         Object parent = graph.getDefaultParent();
         System.out.println("Default Parent: " + parent);
-        System.out.println("Default Parent: " + ((mxCell) parent).getGeometry());
+        System.out.println("Default Parent Geo: " + ((mxCell) parent).getGeometry());
 
         mxStylesheet ss = graph.getStylesheet();
         Hashtable<String, Object> style = new Hashtable<>();
@@ -66,29 +66,46 @@ public class OptimizeRoute extends JFrame {
 
         graph.getModel().beginUpdate();
         try {
-            mxCell v1 = (mxCell) graph.insertVertex(parent, null, "zhu", 20, 120, 80, 30,
-                    "zhu_style");
+            // block 1 and port 1
+            mxCell v1 = (mxCell) graph.insertVertex(parent, null, "zhu", 20, 120, 80, 30, "zhu_style");
             v1.setConnectable(false);
             mxGeometry geo = graph.getModel().getGeometry(v1);
             geo.setAlternateBounds(new mxRectangle(20, 20, 80, 30));
-            mxGeometry geo1 = new mxGeometry(1.0, 0.5, 5, 5);
+            mxGeometry geo1 = new mxGeometry(1.1, 0.5, 6, 6);
             // geo1.setOffset(new mxPoint(0, 0));
             geo1.setRelative(true);
-            mxCell port1 = new mxCell("P1", geo1, "shape=ellipse;perimter=ellipsePerimeter");
+            mxCell port1 = new mxCell("P1", geo1, "");
             port1.setVertex(true);
             graph.addCell(port1, v1);
-            mxCell v2 = (mxCell) graph
-                    .insertVertex(parent, null, "chenfeng", 340, 120, 80, 30);
+            System.out.println("port1 parent: " + port1.getParent().getGeometry());
+            System.out.println("v1 parent: " + v1.getParent().getGeometry());
+
+            // block 2 and port 2
+            mxCell v2 = (mxCell) graph.insertVertex(parent, null, "chenfeng", 340, 120, 80, 30);
             v2.setConnectable(false);
-            mxGeometry geo2 = new mxGeometry(0, 15, 2, 2);
+            mxGeometry geo2 = new mxGeometry(-5, 12, 6, 6);
             // geo2.setOffset(new mxPoint(0, 0));
-            geo2.setRelative(false);
-            mxCell port2 = new mxCell("P2", geo2, "");
+            //geo2.setRelative(false);
+            mxCell port2 = new mxCell("P2", geo2, "shape=ellipse;perimter=ellipsePerimeter");
             port2.setVertex(true);
+            mxGeometry geo21 = new mxGeometry(80, 12, 6, 6);
+            //geo21.setRelative(false);
+            mxCell port21 = new mxCell("P21", geo21, "");
+            port21.setVertex(true);
             graph.addCell(port2, v2);
-            Object v3 = graph.insertVertex(parent, null, "block", 170, 170, 80, 30);
+            graph.addCell(port21, v2);
+            
+            // block 3 and port 3
+            mxCell v3 = (mxCell) graph.insertVertex(parent, null, "block", 170, 170, 80, 30);
+            v3.setConnectable(false);
+            mxGeometry geo3 = new mxGeometry(0.5, -0.2, 6, 6);
+            geo3.setRelative(true);
+            mxCell port3 = new mxCell("P3", geo3, "");
+            port3.setVertex(true);
+            graph.addCell(port3, v3);
+            
             mxCell e1 = (mxCell) graph.insertEdge(parent, "TestLink", "comma", port1, port2);
-            mxCell e2 = (mxCell) graph.insertEdge(parent, null, "block_link", v3, v2);
+            mxCell e2 = (mxCell) graph.insertEdge(parent, null, "block_link", port21, port3);
             e1.setStyle(ss.getDefaultEdgeStyle().toString());
             // e2.setStyle("edgeStyle=elbowEdgeStyle;elbow=horizontal;"+
             // "exitX=1;exitY=0;exitPerimeter=0;entryX=0;entryY=0;entryPerimeter=5;");
@@ -103,7 +120,7 @@ public class OptimizeRoute extends JFrame {
             listPoints.add(new mxPoint(300, 300));
             g.setPoints(listPoints);
             ((mxGraphModel) (graph.getModel())).setGeometry(e2, g);
-            this.createVertices(graph);
+            //this.createVertices(graph);
         } finally {
             graph.getModel().endUpdate();
         }
@@ -121,8 +138,8 @@ public class OptimizeRoute extends JFrame {
                         if (((mxCell) cell).isEdge()) {
                             // System.out.println("Edge: " + cell);
                             mxGeometry g = ((mxCell) cell).getGeometry();
-                            System.out.println("Edge Geometry: (" + g.getX() + ", " + g.getY()
-                                    + "), (" + g.getWidth() + ", " + g.getHeight() + ")");
+                            System.out.println("Edge Geometry: (" + g.getX() + ", " + g.getY() + "), ("
+                                    + g.getWidth() + ", " + g.getHeight() + ")");
                             aGraph.setGraph(graph);
                             // System.out.println(mxGraphStructure.isCutEdge(aGraph,
                             // cell));
@@ -152,8 +169,7 @@ public class OptimizeRoute extends JFrame {
         for (int i = 0; i < 5; i++) {
             int x = r.nextInt(400);
             int y = r.nextInt(400);
-            Object o = graph.insertVertex(graph.getDefaultParent(), null, "block" + i, x, y,
-                    50, 50);
+            Object o = graph.insertVertex(graph.getDefaultParent(), null, "block" + i, x, y, 50, 50);
             listVertex.add(o);
         }
     }
@@ -192,8 +208,7 @@ public class OptimizeRoute extends JFrame {
             private static final long serialVersionUID = -8340518045347205918L;
 
             public void actionPerformed(ActionEvent e) {
-                action.actionPerformed(new ActionEvent(graphComponent, e.getID(), e
-                        .getActionCommand()));
+                action.actionPerformed(new ActionEvent(graphComponent, e.getID(), e.getActionCommand()));
             }
         };
         return newAction;

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.scilab.modules.graph.ScilabGraph;
+import org.scilab.modules.xcos.block.SplitBlock;
 import org.zhuchenf.demo.MyConstants;
 import org.zhuchenf.demo.MyConstants.MyOrientation;
 
@@ -34,8 +35,7 @@ public class RouteUtils {
         if (src != null && tgt != null) {
             System.out.println("All other vertices: " + allOtherCells.length);
             List<mxPoint> ps = cell.getGeometry().getPoints();
-            System.out.println("Edge current turning points: "
-                    + ((ps == null) ? 0 : ps.size()));
+            System.out.println("Edge current turning points: " + ((ps == null) ? 0 : ps.size()));
             // graph.setCellStyle(getPath(cell,all), new Object[] {cell});
             mxGeometry geometry = new mxGeometry();
             boolean flag = computeRoute(cell, allOtherCells, graph);
@@ -56,10 +56,8 @@ public class RouteUtils {
                 graph.setCellStyle("", new Object[] { cell });
                 // graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1",
                 // new Object[] { cell });
-                graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW,
-                        new Object[] { cell });
-                graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL,
-                        new Object[] { cell });
+                graph.setCellStyles(mxConstants.STYLE_EDGE, mxConstants.EDGESTYLE_ELBOW, new Object[] { cell });
+                graph.setCellStyles(mxConstants.STYLE_ELBOW, mxConstants.ELBOW_HORIZONTAL, new Object[] { cell });
                 graph.resetEdge(cell);
                 System.out.println("Optimal is Straight.");
             }
@@ -67,8 +65,8 @@ public class RouteUtils {
     }
 
     /**
-     * Get the turning points for the optimal route. If the straight route is
-     * the optimal route, return null.
+     * Get the turning points for the optimal route. If the straight route is the optimal route,
+     * return null.
      * 
      * @param cell
      * @param allCells
@@ -87,8 +85,8 @@ public class RouteUtils {
         MyOrientation targetPortOrien = null;
         double srcx = graph.getView().getState(src).getCenterX();
         double srcy = graph.getView().getState(src).getCenterY();
-        System.out.println("source: " + srcx + "," + srcy + " ; "
-                + src.getGeometry().getCenterX() + "," + src.getGeometry().getCenterY());
+        System.out.println("source: " + srcx + "," + srcy + " ; " + src.getGeometry().getCenterX() + ","
+                + src.getGeometry().getCenterY());
         mxPoint srcp = new mxPoint(srcx, srcy);
         double tgtx = graph.getView().getState(tgt).getCenterX();
         double tgty = graph.getView().getState(tgt).getCenterY();
@@ -97,13 +95,13 @@ public class RouteUtils {
         mxPoint srcp1 = new mxPoint(srcx, srcy);
         mxPoint tgtp1 = new mxPoint(tgtx, tgty);
         if (src.getParent() != null && src.getParent() != graph.getDefaultParent()) {
-            this.getPointAwayPort(srcp1, src, graph);
             sourcePortOrien = this.getPortRelativeOrientation(src);
+            this.getPointAwayPort(srcp1, sourcePortOrien, src, allCells, graph);
             // sourcePortOrien = this.getRelativeOrientation(src, graph);
         }
         if (tgt.getParent() != null && tgt.getParent() != graph.getDefaultParent()) {
-            this.getPointAwayPort(tgtp1, tgt, graph);
             targetPortOrien = this.getPortRelativeOrientation(tgt);
+            this.getPointAwayPort(tgtp1, targetPortOrien, tgt, allCells, graph);
             // targetPortOrien = this.getRelativeOrientation(tgt, graph);
         }
         // if two ports are not oblique and not in the same direction,
@@ -122,15 +120,13 @@ public class RouteUtils {
         // (srcy + srcp1.getY()) / 2), allCells));
         // listRoute.add(srcp1);
         System.out.println("Orientation: " + sourcePortOrien + ", " + targetPortOrien);
-        List<mxPoint> list = this.getSimpleRoute(srcp1, sourcePortOrien, tgtp1,
-                targetPortOrien, allCells);
+        List<mxPoint> list = this.getSimpleRoute(srcp1, sourcePortOrien, tgtp1, targetPortOrien, allCells);
         System.out.println("SimpleRoute: " + list);
         if (list != null && list.size() > 0) {
             listRoute.addAll(list);
             return true;
         } else {
-            list = this.getComplexRoute(srcp1, sourcePortOrien, tgtp1, targetPortOrien,
-                    allCells, 3);
+            list = this.getComplexRoute(srcp1, sourcePortOrien, tgtp1, targetPortOrien, allCells, 3);
             System.out.println("ComplexRoute: " + list);
             if (list != null && list.size() > 0) {
                 listRoute.addAll(list);
@@ -158,8 +154,8 @@ public class RouteUtils {
      *            all the possible
      * @return
      */
-    public List<mxPoint> getSimpleRoute(mxPoint p1, MyOrientation o1, mxPoint p2,
-            MyOrientation o2, Object[] allCells) {
+    public List<mxPoint> getSimpleRoute(mxPoint p1, MyOrientation o1, mxPoint p2, MyOrientation o2,
+            Object[] allCells) {
         // point1 and point2 are not in the vertical or horizontal line.
         List<mxPoint> listRoute = new ArrayList<>(0);
         List<Double> listX = new ArrayList<>(0);
@@ -279,8 +275,8 @@ public class RouteUtils {
                     start_temp = list.get(i);
                     end_temp = list.get(i);
                     restart = true;
-                } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
-                        || (tmp < nMax && tmp > nMin) && (mid < nMin || mid > nMax)) {
+                } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start)) || (tmp < nMax && tmp > nMin)
+                        && (mid < nMin || mid > nMax)) {
                     // if the new one in between two points and the previous one
                     // is out of them, or if the new one is longer than the
                     // previous one,
@@ -304,8 +300,8 @@ public class RouteUtils {
         return (int) ((start + end) / 2);
     }
 
-    public List<mxPoint> getComplexRoute(mxPoint p1, MyOrientation o1, mxPoint p2,
-            MyOrientation o2, Object[] allCells, int times) {
+    public List<mxPoint> getComplexRoute(mxPoint p1, MyOrientation o1, mxPoint p2, MyOrientation o2,
+            Object[] allCells, int times) {
         if (times <= 0) {
             return null;
         }
@@ -475,8 +471,7 @@ public class RouteUtils {
         return d;
     }
 
-    public boolean checkLinesIntersection(double x1, double y1, double x2, double y2,
-            mxCell edge) {
+    public boolean checkLinesIntersection(double x1, double y1, double x2, double y2, mxCell edge) {
         if (edge.isVertex()) {
             return false;
         }
@@ -501,8 +496,7 @@ public class RouteUtils {
     }
 
     /**
-     * Check whether two lines coincide or not. The lines are vertical or
-     * horizontal. <br/>
+     * Check whether two lines coincide or not. The lines are vertical or horizontal. <br/>
      * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
      * 
      * @param x1
@@ -517,8 +511,7 @@ public class RouteUtils {
      *            the second line
      * @return <b>true</b> if two lines coincide completely or partly.
      */
-    public static boolean checkLinesCoincide(double x1, double y1, double x2, double y2,
-            mxCell edge) {
+    public static boolean checkLinesCoincide(double x1, double y1, double x2, double y2, mxCell edge) {
         if (edge.isVertex()) {
             return false;
         }
@@ -576,25 +569,21 @@ public class RouteUtils {
      *            the y-coordinate of the second point of the second line
      * @return <b>true</b> if two lines coincide.
      */
-    public static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3,
-            double y3, double x4, double y4) {
+    public static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
+            double x4, double y4) {
         // the first line is inside the second line.
-        if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
-                && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
+        if (pointInLineSegment(x1, y1, x3, y3, x4, y4) && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
             return true;
         }
         // the second line is inside the first line.
-        if (pointInLineSegment(x3, y3, x1, y1, x2, y2)
-                && pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
+        if (pointInLineSegment(x3, y3, x1, y1, x2, y2) && pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
             return true;
         }
         double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
         // two lines are parallel.
         if (i == 0) {
-            if (pointInLineSegment(x1, y1, x3, y3, x4, y4)
-                    || pointInLineSegment(x2, y2, x3, y3, x4, y4)
-                    || pointInLineSegment(x3, y3, x1, y1, x2, y2)
-                    || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
+            if (pointInLineSegment(x1, y1, x3, y3, x4, y4) || pointInLineSegment(x2, y2, x3, y3, x4, y4)
+                    || pointInLineSegment(x3, y3, x1, y1, x2, y2) || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
                 return true;
             }
         }
@@ -618,8 +607,7 @@ public class RouteUtils {
      *            the y-coordinate of the second point of the line
      * @return <b>true</b> if the point is in the line segment.
      */
-    public static boolean pointInLineSegment(double x1, double y1, double x2, double y2,
-            double x3, double y3) {
+    public static boolean pointInLineSegment(double x1, double y1, double x2, double y2, double x3, double y3) {
         // double l12 = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 -
         // y1));
         // double l23 = Math.sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 -
@@ -627,8 +615,7 @@ public class RouteUtils {
         // double l13 = Math.sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 -
         // y1));
         // if (l23 == (l12 + l13)) {
-        if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2))
-                && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
+        if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2)) && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
                 && (y1 >= Math.min(y2, y3) && y1 <= Math.max(y2, y3))) {
             return true;
         }
@@ -657,21 +644,46 @@ public class RouteUtils {
         return true;
     }
 
-    public void getPointAwayPort(mxPoint point, mxICell port, ScilabGraph graph) {
+    public void getPointAwayPort(mxPoint point, MyOrientation orien, mxICell port, Object[] allCells,
+            ScilabGraph graph) {
+        double portX = graph.getView().getState(port).getCenterX();
+        double portY = graph.getView().getState(port).getCenterY();
+        // point = new mxPoint(portX, portY);
         double away = MyConstants.BEAUTY_AWAY_DISTANCE;
-        switch (getPortRelativeOrientation(port)) {
+        double revision = MyConstants.BEAUTY_AWAY_REVISION;
+        switch (orien) {
         // switch (getRelativeOrientation(port, graph)) {
         case EAST:
             point.setX(point.getX() + away);
+            while (Math.abs(point.getX() - portX) > revision
+                    && (this.checkObstacle(new mxPoint(portX, portY), point, allCells) || this.checkPointInBlocks(
+                            point.getX(), point.getY(), allCells))) {
+                point.setX(point.getX() - revision);
+            }
             break;
         case SOUTH:
-            point.setY(point.getY() - away);
+            point.setY(point.getY() + away);
+            while (Math.abs(point.getY() - portY) > revision
+                    && (this.checkObstacle(new mxPoint(portX, portY), point, allCells) || this.checkPointInBlocks(
+                            point.getX(), point.getY(), allCells))) {
+                point.setY(point.getY() - revision);
+            }
             break;
         case WEST:
             point.setX(point.getX() - away);
+            while (Math.abs(point.getX() - portX) > revision
+                    && (this.checkObstacle(new mxPoint(portX, portY), point, allCells) || this.checkPointInBlocks(
+                            point.getX(), point.getY(), allCells))) {
+                point.setX(point.getX() + revision);
+            }
             break;
         case NORTH:
-            point.setY(point.getY() + away);
+            point.setY(point.getY() - away);
+            while (Math.abs(point.getY() - portY) > revision
+                    && (this.checkObstacle(new mxPoint(portX, portY), point, allCells) || this.checkPointInBlocks(
+                            point.getX(), point.getY(), allCells))) {
+                point.setY(point.getY() + revision);
+            }
             break;
         }
     }
@@ -746,6 +758,65 @@ public class RouteUtils {
     }
 
     /**
+     * Check whether a point is in the range of one block (including the ports).
+     * 
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param allCells
+     * @return <b>true</b> if one point is in one block.
+     */
+    public boolean checkPointInBlocks(double x, double y, Object[] allCells) {
+        for (Object o : allCells) {
+            if (o instanceof mxCell) {
+                mxCell block = (mxCell) o;
+                if (!block.isEdge()) {
+                    double ix = 0;
+                    double iy = 0;
+                    double iw = 0;
+                    double ih = 0;
+                    mxGeometry g = block.getGeometry();
+                    for (int i = 0; i < block.getChildCount(); i++) {
+                        mxICell child = block.getChildAt(i);
+                        if (child.getGeometry() == null) {
+                            continue;
+                        }
+                        mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry()
+                                .getY(), child.getGeometry().getWidth(), child.getGeometry().getHeight());
+                        if (child.getGeometry().isRelative()) {
+                            childGeo.setX(g.getWidth() * childGeo.getX());
+                            childGeo.setY(g.getHeight() * childGeo.getY());
+                        }
+                        if (childGeo.getX() < 0) {
+                            ix = childGeo.getX();
+                            iw = Math.abs(ix);
+                        }
+                        if (childGeo.getX() + childGeo.getWidth() > g.getWidth()) {
+                            iw += childGeo.getX() + childGeo.getWidth() - g.getWidth();
+                        }
+                        if (childGeo.getY() < 0) {
+                            iy = childGeo.getY();
+                            ih = Math.abs(iy);
+                        }
+                        if (childGeo.getY() + childGeo.getHeight() > Math.max(block.getGeometry().getHeight(), ih)) {
+                            ih += childGeo.getY() + childGeo.getHeight() - g.getHeight();
+                        }
+                    }
+                    double blockx = g.getX() + ix;
+                    double blocky = g.getY() + iy;
+                    double width = g.getWidth() + iw;
+                    double height = g.getHeight() + ih;
+                    if (x >= blockx && x <= (blockx + width) && y >= blocky && y < (blocky + height)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Remove the relative cell from the array.
      * 
      * @param all
@@ -754,6 +825,23 @@ public class RouteUtils {
      */
     public Object[] getAllOtherCells(Object[] all, Object... self) {
         List<Object> listme = Arrays.asList(self);
+        for (Object obj : self) {
+            // if self contains a link
+            if (obj instanceof mxCell) {
+                mxCell link = (mxCell) obj;
+                if (link.isVertex()) {
+                    continue;
+                }
+                // in these selves, if the source/target of this link belongs to a SplitBlock,
+                // remove it.
+                if (link.getSource() != null && link.getSource().getParent() instanceof SplitBlock) {
+                    listme.add(link.getSource().getParent());
+                }
+                if (link.getTarget() != null && link.getTarget().getParent() instanceof SplitBlock) {
+                    listme.add(link.getTarget().getParent());
+                }
+            }
+        }
         List<Object> listnew = new ArrayList<>(0);
         System.out.println(all.length + ", " + listme.size());
         // Iterator<Object> iterator = list.iterator();
@@ -766,6 +854,19 @@ public class RouteUtils {
         for (Object o : all) {
             if (!listme.contains(o)) {
                 listnew.add(o);
+                if (o instanceof mxCell) {
+                    mxCell c = (mxCell) o;
+                    if (c.isEdge()) {
+                        listnew.add(c.getSource());
+                        listnew.add(c.getTarget());
+                    } else if (c.isVertex()) {
+                        for (int i = 0; i < c.getChildCount(); i++) {
+                            if (!listme.contains(c.getChildAt(i))) {
+                                listnew.add(c.getChildAt(i));
+                            }
+                        }
+                    }
+                }
             }
         }
         Object[] newAll = listnew.toArray();
@@ -822,55 +923,60 @@ public class RouteUtils {
             return null;
         }
         List<mxPoint> list = new ArrayList<mxPoint>(0);
+        mxPoint offset;
         mxICell source = edge.getSource();
-        mxGeometry sourceGeo = source.getGeometry();
-        double srcx = sourceGeo.getCenterX();
-        double srcy = sourceGeo.getCenterY();
-        mxICell sourceParent = source.getParent();
-        mxGeometry srcParGeo = sourceParent.getGeometry();
-        if (srcParGeo == null) {
-            srcParGeo = new mxGeometry(0, 0, 0, 0);
+        if (source != null) {
+            mxGeometry sourceGeo = source.getGeometry();
+            double srcx = sourceGeo.getCenterX();
+            double srcy = sourceGeo.getCenterY();
+            mxICell sourceParent = source.getParent();
+            mxGeometry srcParGeo = sourceParent.getGeometry();
+            if (srcParGeo == null) {
+                srcParGeo = new mxGeometry(0, 0, 0, 0);
+            }
+            offset = sourceGeo.getOffset();
+            if (offset == null) {
+                offset = new mxPoint(0, 0);
+            }
+            if (sourceGeo.isRelative()) {
+                srcx = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
+                srcy = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
+            } else {
+                srcx = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
+                srcy = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
+            }
+            // System.out.println("Source state: " +
+            // graph.getView().getState(source).getCenterX()
+            // + ", " + graph.getView().getState(source).getCenterY());
+            // System.out.println("Source Geo: " + srcx + ", " + srcy);
+            list.add(new mxPoint(srcx, srcy));
         }
-        mxPoint offset = sourceGeo.getOffset();
-        if (offset == null) {
-            offset = new mxPoint(0, 0);
-        }
-        if (sourceGeo.isRelative()) {
-            srcx = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
-            srcy = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
-        } else {
-            srcx = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
-            srcy = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
-        }
-        // System.out.println("Source state: " +
-        // graph.getView().getState(source).getCenterX()
-        // + ", " + graph.getView().getState(source).getCenterY());
-        // System.out.println("Source Geo: " + srcx + ", " + srcy);
-        list.add(new mxPoint(srcx, srcy));
         if (edge.getGeometry().getPoints() != null) {
             list.addAll(edge.getGeometry().getPoints());
         }
         mxICell target = edge.getTarget();
-        mxGeometry targetGeo = target.getGeometry();
-        double tgtx = targetGeo.getCenterX();
-        double tgty = targetGeo.getCenterY();
-        mxICell targetParent = target.getParent();
-        mxGeometry tgGeo = targetParent.getGeometry();
-        if (tgGeo == null) {
-            tgGeo = new mxGeometry(0, 0, 0, 0);
+        if (target != null) {
+            mxGeometry targetGeo = target.getGeometry();
+            double tgtx = targetGeo.getCenterX();
+            double tgty = targetGeo.getCenterY();
+            mxICell targetParent = target.getParent();
+            mxGeometry tgGeo = targetParent.getGeometry();
+            if (tgGeo == null) {
+                tgGeo = new mxGeometry(0, 0, 0, 0);
+            }
+            offset = targetGeo.getOffset();
+            if (offset == null) {
+                offset = new mxPoint(0, 0);
+            }
+            if (targetGeo.isRelative()) {
+                tgtx = tgGeo.getX() + targetGeo.getX() * tgGeo.getWidth() + offset.getX();
+                tgty = tgGeo.getY() + targetGeo.getY() * tgGeo.getHeight() + offset.getY();
+            } else {
+                tgtx = tgGeo.getX() + targetGeo.getX() + offset.getX();
+                tgty = tgGeo.getY() + targetGeo.getY() + offset.getY();
+            }
+            list.add(new mxPoint(tgtx, tgty));
         }
-        offset = targetGeo.getOffset();
-        if (offset == null) {
-            offset = new mxPoint(0, 0);
-        }
-        if (targetGeo.isRelative()) {
-            tgtx = tgGeo.getX() + targetGeo.getX() * tgGeo.getWidth() + offset.getX();
-            tgty = tgGeo.getY() + targetGeo.getY() * tgGeo.getHeight() + offset.getY();
-        } else {
-            tgtx = tgGeo.getX() + targetGeo.getX() + offset.getX();
-            tgty = tgGeo.getY() + targetGeo.getY() + offset.getY();
-        }
-        list.add(new mxPoint(tgtx, tgty));
         return list;
     }
 
@@ -880,7 +986,7 @@ public class RouteUtils {
         }
         // the coordinate (x,y) for the port.
         mxGeometry portGeo = port.getGeometry();
-        double portx = portGeo.getCenterY();
+        double portx = portGeo.getCenterX();
         double porty = portGeo.getCenterY();
         // the coordinate (x,y) and the width-height for the parent block
         mxICell parent = port.getParent();
@@ -888,8 +994,8 @@ public class RouteUtils {
         double blockw = parentGeo.getWidth();
         double blockh = parentGeo.getHeight();
         if (portGeo.isRelative()) {
-            portx *= blockw;
-            porty *= blockh;
+            portx = portGeo.getX() * blockw;
+            porty = portGeo.getY() * blockh;
         }
         // calculate relative coordinate based on the center of parent block.
         portx -= blockw / 2;
