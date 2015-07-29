@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.block.SplitBlock;
 import org.scilab.modules.xcos.graph.XcosDiagram;
 import org.scilab.modules.xcos.link.BasicLink;
@@ -89,11 +90,11 @@ public class XcosRoute {
                 srcx = state.getCenterX();
                 srcy = state.getCenterY();
                 BasicPort sourcePort = (BasicPort) sourceCell;
-                sourcePoint = this.getPointAwayPort(sourcePort, allCells, graph);
                 sourcePortOrien = getPortRelativeOrientation(sourcePort, graph);
+                sourcePoint = getPointAwayPort(sourcePort, sourcePortOrien, allCells, graph);
             }
         }
-        // if source is a SplitBlock
+        // if source belongs to a SplitBlock
         if (sourceCell.getParent() instanceof SplitBlock) {
             srcx = sourceCell.getParent().getGeometry().getCenterX();
             srcy = sourceCell.getParent().getGeometry().getCenterY();
@@ -107,8 +108,8 @@ public class XcosRoute {
                 tgtx = state.getCenterX();
                 tgty = state.getCenterY();
                 BasicPort targetPort = (BasicPort) targetCell;
-                targetPoint = this.getPointAwayPort(targetPort, allCells, graph);
                 targetPortOrien = getPortRelativeOrientation(targetPort, graph);
+                targetPoint = getPointAwayPort(targetPort, targetPortOrien, allCells, graph);
             }
         }
         // if target is a SplitBlock
@@ -137,8 +138,6 @@ public class XcosRoute {
                 return true;
             }
         }
-        // listRoute.add(sourcePoint);
-        // listRoute.add(targetPoint);
         return false;
     }
 
@@ -150,38 +149,42 @@ public class XcosRoute {
      * @param graph
      * @return
      */
-    private mxPoint getPointAwayPort(BasicPort port, Object[] allCells, XcosDiagram graph) {
+    private mxPoint getPointAwayPort(BasicPort port, Orientation orien, Object[] allCells, XcosDiagram graph) {
         double portX = graph.getView().getState(port).getCenterX();
         double portY = graph.getView().getState(port).getCenterY();
         mxPoint point = new mxPoint(portX, portY);
         double distance = XcosRouteUtils.BEAUTY_AWAY_DISTANCE;
-        switch (getPortRelativeOrientation(port, graph)) {
+        switch (orien) {
         // switch (port.getOrientation()) {
         case EAST:
             point.setX(point.getX() + distance);
             while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
+                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setX(point.getX() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case SOUTH:
             point.setY(point.getY() + distance);
             while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
+                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setY(point.getY() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case WEST:
             point.setX(point.getX() - distance);
             while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
+                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setX(point.getX() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case NORTH:
             point.setY(point.getY() - distance);
             while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
+                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setY(point.getY() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
@@ -223,29 +226,43 @@ public class XcosRoute {
     }
 
     /**
-     * Remove the selves from the array of all. Remove all SplitBlock. Add the Ports.
+     * Remove the selves from the array of all.<br/>
+     * except for selves and the ports of links in selves, add other ports of blocks.
      * 
      * @param all
      * @param self
+     *            If self's source port or target port belongs to a SpliBlock, remove this
+     *            SplitBlock, too.
      * @return a new array of all objects excluding selves
      */
     private Object[] getAllOtherCells(Object[] all, Object... self) {
         List<Object> listme = Arrays.asList(self);
+        for (Object obj : self) {
+            // if self contains a link
+            if (obj instanceof BasicLink) {
+                BasicLink link = (BasicLink) obj;
+                // in these selves, if the source/target of this link belongs to a SplitBlock,
+                // remove it.
+                if (link.getSource() != null && link.getSource().getParent() instanceof SplitBlock) {
+                    listme.add(link.getSource().getParent());
+                }
+                if (link.getTarget() != null && link.getTarget().getParent() instanceof SplitBlock) {
+                    listme.add(link.getTarget().getParent());
+                }
+            }
+        }
         List<Object> listnew = new ArrayList<Object>(0);
         for (Object o : all) {
-            // if it belongs to self or it is SplitBlock.
-            if (!listme.contains(o) && !(o instanceof SplitBlock)) {
+            // if it does not belongs to self,
+            if (!listme.contains(o)) {
                 listnew.add(o);
-                // if it is a Link, add its Ports.
-                if (o instanceof BasicLink) {
-                    BasicLink link = (BasicLink) o;
-                    if (!listnew.contains(link.getSource())
-                            && !(link.getSource().getParent() instanceof SplitBlock)) {
-                        listnew.add(link.getSource());
-                    }
-                    if (!listnew.contains(link.getTarget())
-                            && !(link.getTarget().getParent() instanceof SplitBlock)) {
-                        listnew.add(link.getTarget());
+                // add the ports of the block.
+                if (o instanceof BasicBlock) {
+                    BasicBlock block = (BasicBlock) o;
+                    for (int i = 0; i < block.getChildCount(); i++) {
+                        if (!listme.contains(block.getChildAt(i))) {
+                            listnew.add(block.getChildAt(i));
+                        }
                     }
                 }
             }
@@ -253,5 +270,4 @@ public class XcosRoute {
         Object[] newAll = listnew.toArray();
         return newAll;
     }
-
 }

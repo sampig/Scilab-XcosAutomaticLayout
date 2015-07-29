@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.link.BasicLink;
 import org.scilab.modules.xcos.port.BasicPort;
 import org.scilab.modules.xcos.port.Orientation;
@@ -67,7 +68,7 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point
      * @return <b>true</b> if two points are aligned.
      */
-    public static boolean isStrictlyAligned(double x1, double y1, double x2, double y2) {
+    protected static boolean isStrictlyAligned(double x1, double y1, double x2, double y2) {
         double error = XcosRouteUtils.ALIGN_STRICT_ERROR;
         if (Math.abs(x2 - x1) < error) {
             return true;
@@ -86,51 +87,59 @@ public abstract class XcosRouteUtils {
      */
     protected static List<mxPoint> getLinkPoints(BasicLink link) {
         List<mxPoint> list = new ArrayList<mxPoint>(0);
+        mxPoint offset;
+        // add the source point.
         mxICell source = link.getSource();
-        mxGeometry sourceGeo = source.getGeometry();
-        double sourceX = sourceGeo.getCenterX();
-        double sourceY = sourceGeo.getCenterY();
-        mxICell sourceParent = source.getParent();
-        mxGeometry srcParGeo = sourceParent.getGeometry();
-        if (srcParGeo == null) {
-            srcParGeo = new mxGeometry(0, 0, 0, 0);
+        if (source != null) {
+            mxGeometry sourceGeo = source.getGeometry();
+            double sourceX = sourceGeo.getCenterX();
+            double sourceY = sourceGeo.getCenterY();
+            mxICell sourceParent = source.getParent();
+            mxGeometry srcParGeo = sourceParent.getGeometry();
+            if (srcParGeo == null) {
+                srcParGeo = new mxGeometry(0, 0, 0, 0);
+            }
+            offset = sourceGeo.getOffset();
+            if (offset == null) {
+                offset = new mxPoint(0, 0);
+            }
+            if (sourceGeo.isRelative()) {
+                sourceX = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
+                sourceY = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
+            } else {
+                sourceX = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
+                sourceY = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
+            }
+            list.add(new mxPoint(sourceX, sourceY));
         }
-        mxPoint offset = sourceGeo.getOffset();
-        if (offset == null) {
-            offset = new mxPoint(0, 0);
-        }
-        if (sourceGeo.isRelative()) {
-            sourceX = srcParGeo.getX() + sourceGeo.getX() * srcParGeo.getWidth() + offset.getX();
-            sourceY = srcParGeo.getY() + sourceGeo.getY() * srcParGeo.getHeight() + offset.getY();
-        } else {
-            sourceX = srcParGeo.getX() + sourceGeo.getX() + offset.getX();
-            sourceY = srcParGeo.getY() + sourceGeo.getY() + offset.getY();
-        }
-        list.add(new mxPoint(sourceX, sourceY));
+        // add all the turning points.
         if (link.getGeometry().getPoints() != null) {
             list.addAll(link.getGeometry().getPoints());
         }
+        // add the target point.
         mxICell target = link.getTarget();
-        mxGeometry targetGeo = target.getGeometry();
-        double targetX = targetGeo.getCenterX();
-        double targetY = targetGeo.getCenterY();
-        mxICell targetParent = target.getParent();
-        mxGeometry tgtParGeo = targetParent.getGeometry();
-        if (tgtParGeo == null) {
-            tgtParGeo = new mxGeometry(0, 0, 0, 0);
+        if (target != null) {
+            mxGeometry targetGeo = target.getGeometry();
+            double targetX = targetGeo.getCenterX();
+            double targetY = targetGeo.getCenterY();
+            mxICell targetParent = target.getParent();
+            mxGeometry tgtParGeo = targetParent.getGeometry();
+            if (tgtParGeo == null) {
+                tgtParGeo = new mxGeometry(0, 0, 0, 0);
+            }
+            offset = targetGeo.getOffset();
+            if (offset == null) {
+                offset = new mxPoint(0, 0);
+            }
+            if (targetGeo.isRelative()) {
+                targetX = tgtParGeo.getX() + targetGeo.getX() * tgtParGeo.getWidth() + offset.getX();
+                targetY = tgtParGeo.getY() + targetGeo.getY() * tgtParGeo.getHeight() + offset.getY();
+            } else {
+                targetX = tgtParGeo.getX() + targetGeo.getX() + offset.getX();
+                targetY = tgtParGeo.getY() + targetGeo.getY() + offset.getY();
+            }
+            list.add(new mxPoint(targetX, targetY));
         }
-        offset = targetGeo.getOffset();
-        if (offset == null) {
-            offset = new mxPoint(0, 0);
-        }
-        if (targetGeo.isRelative()) {
-            targetX = tgtParGeo.getX() + targetGeo.getX() * tgtParGeo.getWidth() + offset.getX();
-            targetY = tgtParGeo.getY() + targetGeo.getY() * tgtParGeo.getHeight() + offset.getY();
-        } else {
-            targetX = tgtParGeo.getX() + targetGeo.getX() + offset.getX();
-            targetY = tgtParGeo.getY() + targetGeo.getY() + offset.getY();
-        }
-        list.add(new mxPoint(targetX, targetY));
         return list;
     }
 
@@ -148,7 +157,7 @@ public abstract class XcosRouteUtils {
      * @param allCells
      * @return <b>true</b> if there is at least one blocks in the line.
      */
-    public static boolean checkObstacle(double x1, double y1, double x2, double y2, Object[] allCells) {
+    protected static boolean checkObstacle(double x1, double y1, double x2, double y2, Object[] allCells) {
         for (Object o : allCells) {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
@@ -161,10 +170,77 @@ public abstract class XcosRouteUtils {
                         return true;
                     }
                 } else {
-                    mxPoint interction = c.getGeometry().intersectLine(x1, y1, x2, y2);
+                    mxGeometry geo = c.getGeometry();
+                    mxGeometry newGeo = new mxGeometry(geo.getX(), geo.getY(), geo.getWidth(), geo.getHeight());
+                    // if it is a BasicPort, re-calculate its geometry position.
+                    if (c.getParent().getGeometry() != null && c instanceof BasicPort) {
+                        double x = c.getParent().getGeometry().getX() + newGeo.getX();
+                        newGeo.setX(x);
+                        double y = c.getParent().getGeometry().getY() + newGeo.getY();
+                        newGeo.setY(y);
+                    }
+                    mxPoint interction = newGeo.intersectLine(x1, y1, x2, y2);
                     if (interction != null) {
                         return true;
                     }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether a point is in the range of one block (including the ports).
+     * 
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param allCells
+     * @return <b>true</b> if one point is in one block.
+     */
+    protected static boolean checkPointInBlocks(double x, double y, Object[] allCells) {
+        for (Object o : allCells) {
+            if (o instanceof BasicBlock) {
+                BasicBlock block = (BasicBlock) o;
+                // if it is a BasicBlock, re-calculate its size with its port.
+                double ix = 0;
+                double iy = 0;
+                double iw = 0;
+                double ih = 0;
+                mxGeometry g = block.getGeometry();
+                for (int i = 0; i < block.getChildCount(); i++) {
+                    mxICell child = block.getChildAt(i);
+                    if (child.getGeometry() == null) {
+                        continue;
+                    }
+                    mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry().getY(),
+                            child.getGeometry().getWidth(), child.getGeometry().getHeight());
+                    if (child.getGeometry().isRelative()) {
+                        childGeo.setX(g.getWidth() * childGeo.getX());
+                        childGeo.setY(g.getHeight() * childGeo.getY());
+                    }
+                    if (childGeo.getX() < 0) {
+                        ix = childGeo.getX();
+                        iw = Math.abs(ix);
+                    }
+                    if (childGeo.getX() + childGeo.getWidth() > g.getWidth()) {
+                        iw += childGeo.getX() + childGeo.getWidth() - g.getWidth();
+                    }
+                    if (childGeo.getY() < 0) {
+                        iy = childGeo.getY();
+                        ih = Math.abs(iy);
+                    }
+                    if (childGeo.getY() + childGeo.getHeight() > Math.max(block.getGeometry().getHeight(), ih)) {
+                        ih += childGeo.getY() + childGeo.getHeight() - g.getHeight();
+                    }
+                }
+                double blockx = g.getX() + ix;
+                double blocky = g.getY() + iy;
+                double width = g.getWidth() + iw;
+                double height = g.getHeight() + ih;
+                if (x >= blockx && x <= (blockx + width) && y >= blocky && y < (blocky + height)) {
+                    return true;
                 }
             }
         }
@@ -584,7 +660,7 @@ public abstract class XcosRouteUtils {
         }
         // the coordinate (x,y) for the port.
         mxGeometry portGeo = port.getGeometry();
-        double portX = portGeo.getCenterY();
+        double portX = portGeo.getCenterX();
         double portY = portGeo.getCenterY();
         // the coordinate (x,y) and the width-height for the parent block
         mxICell parent = port.getParent();
