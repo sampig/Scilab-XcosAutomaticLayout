@@ -40,8 +40,7 @@ public class RouteUtils {
             mxGeometry geometry = new mxGeometry();
             boolean flag = computeRoute(cell, allOtherCells, graph);
             if (flag) {
-                List<mxPoint> list = new ArrayList<mxPoint>();
-                list.addAll(listRoute);
+                List<mxPoint> list = getNonRedundantPoints();
                 // double scale = graph.getView().getScale();
                 // for (mxPoint p : list) {
                 // p.setX(p.getX() / scale);
@@ -137,6 +136,36 @@ public class RouteUtils {
         // listRoute.addAll(listPath);
         // listRoute.add(tgtp1);
         return true;
+    }
+
+    /**
+     * Remove the redundancy points from the route.
+     * 
+     * @return a list without non-redundant points
+     */
+    public List<mxPoint> getNonRedundantPoints() {
+        List<mxPoint> list = new ArrayList<mxPoint>(0);
+        if (listRoute.size() > 2) {
+            list.add(listRoute.get(0));
+            for (int i = 1; i < listRoute.size() - 1; i++) {
+                mxPoint p1 = list.get(list.size() - 1);
+                mxPoint p2 = listRoute.get(i);
+                mxPoint p3 = listRoute.get(i + 1);
+                if (pointInLineSegment(p2.getX(), p2.getY(), p1.getX(), p1.getY(), p3.getX(), p3.getY())) {
+                    // if p2 is in the line segment between p1 and p3, remove it.
+                    continue;
+                } else {
+                    list.add(p2);
+                }
+            }
+            list.add(listRoute.get(listRoute.size() - 1));
+        } else {
+            // if the route has less than 3 points, there is no redundancy.
+            list.addAll(listRoute);
+        }
+        System.out.println("getNonRedundantPoints.listRoute: "+listRoute);
+        System.out.println("getNonRedundantPoints.list: "+list);
+        return list;
     }
 
     public List<mxPoint> getSimpleRoute(mxPoint p1, mxPoint p2, Object[] allCells) {
@@ -530,16 +559,6 @@ public class RouteUtils {
                 double y3 = point3.getY();
                 double x4 = point4.getX();
                 double y4 = point4.getY();
-                if (x1 == x2) {
-                    if (x3 != x1 || x4 != x1) {
-                        return false;
-                    }
-                }
-                if (y1 == y2) {
-                    if (y3 != y1 || y4 != y1) {
-                        return false;
-                    }
-                }
                 if (linesCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
                     return true;
                 }
