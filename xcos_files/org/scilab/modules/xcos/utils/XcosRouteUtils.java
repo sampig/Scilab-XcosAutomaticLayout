@@ -14,9 +14,12 @@ package org.scilab.modules.xcos.utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.scilab.modules.xcos.block.BasicBlock;
+import org.scilab.modules.xcos.block.SplitBlock;
 import org.scilab.modules.xcos.link.BasicLink;
 import org.scilab.modules.xcos.port.BasicPort;
 import org.scilab.modules.xcos.port.Orientation;
@@ -36,13 +39,14 @@ public abstract class XcosRouteUtils {
     /**
      * The error which can be accepted as it is aligned strictly.
      */
-    public final static double ALIGN_STRICT_ERROR = 0.01;
+    public final static double ALIGN_STRICT_ERROR = 2;
 
     /**
      * The distance for a point away to the port.
      */
-    public final static double BEAUTY_AWAY_DISTANCE = 30;
+    public final static double BEAUTY_AWAY_DISTANCE = 40;
     public final static double BEAUTY_AWAY_REVISION = 10;
+    public final static double SPLITBLOCK_AWAY_DISTANCE = 15;
 
     /**
      * Define a normal half size of block to avoid.
@@ -162,11 +166,16 @@ public abstract class XcosRouteUtils {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
                 if (c instanceof BasicLink) {
-                    BasicLink link = (BasicLink) c;
-                    if (checkLinesIntersection(x1, y1, x2, y2, link)) {
+                    BasicLink l = (BasicLink) c;
+                    if (checkLinesIntersection(x1, y1, x2, y2, l)) {
+                        // check intersection.
+                        // return true;
+                    }
+                    if (checkLinesCoincide(x1, y1, x2, y2, l)) {
+                        // check superimposition.
                         return true;
                     }
-                    if (checkLinesCoincide(x1, y1, x2, y2, link)) {
+                    if (pointInLink(x1, y1, l) || pointInLink(x2, y2, l)) {
                         return true;
                     }
                 } else {
@@ -301,12 +310,14 @@ public abstract class XcosRouteUtils {
     private static boolean checkLinesCoincide(double x1, double y1, double x2, double y2, BasicLink link) {
         // mxICell source = line.getSource();
         // mxICell target = line.getTarget();
-        List<mxPoint> listPoints = link.getGeometry().getPoints();
-        if (listPoints == null || listPoints.size() == 0) {
+        List<mxPoint> listPoints = new ArrayList<mxPoint>(0);
+        if (link.getGeometry().getPoints() == null || link.getGeometry().getPoints().size() == 0) {
             // if the edge is straight or vertical or horizontal style, there is
             // no way to check.
-        } else if (listPoints.size() == 1) {
         } else {
+            listPoints.add(getLinkPortPosition(link, true));
+            listPoints.addAll(link.getGeometry().getPoints());
+            listPoints.add(getLinkPortPosition(link, false));
             for (int i = 1; i < listPoints.size(); i++) {
                 mxPoint point3 = listPoints.get(i - 1);
                 mxPoint point4 = listPoints.get(i);
@@ -314,16 +325,6 @@ public abstract class XcosRouteUtils {
                 double y3 = point3.getY();
                 double x4 = point4.getX();
                 double y4 = point4.getY();
-                if (x1 == x2) {
-                    if (x3 != x1 || x4 != x1) {
-                        return false;
-                    }
-                }
-                if (y1 == y2) {
-                    if (y3 != y1 || y4 != y1) {
-                        return false;
-                    }
-                }
                 if (linesCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
                     return true;
                 }
@@ -355,6 +356,58 @@ public abstract class XcosRouteUtils {
      */
     private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
             double x4, double y4) {
+        x1 = Math.round(x1);
+        y1 = Math.round(y1);
+        x2 = Math.round(x2);
+        y2 = Math.round(y2);
+        x3 = Math.round(x3);
+        y3 = Math.round(y3);
+        x4 = Math.round(x4);
+        y4 = Math.round(y4);
+        if (linesStrictlyCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
+            return true;
+        }
+        if (x1 == x2) {
+            for (double xi = x1 - ALIGN_STRICT_ERROR; xi < x1 + ALIGN_STRICT_ERROR; xi++) {
+                xi = Math.round(xi);
+                if (linesStrictlyCoincide(xi, y1, xi, y2, x3, y3, x4, y4)) {
+                    return true;
+                }
+            }
+        } else if (y1 == y2) {
+            for (double yi = y1 - ALIGN_STRICT_ERROR; yi < y1 + ALIGN_STRICT_ERROR; yi++) {
+                yi = Math.round(yi);
+                if (linesStrictlyCoincide(x1, yi, x2, yi, x3, y3, x4, y4)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether two lines strictly coincide or not.
+     * 
+     * @param x1
+     *            the x-coordinate of the first point of the first line
+     * @param y1
+     *            the y-coordinate of the first point of the first line
+     * @param x2
+     *            the x-coordinate of the second point of the first line
+     * @param y2
+     *            the y-coordinate of the second point of the first line
+     * @param x3
+     *            the x-coordinate of the first point of the second line
+     * @param y3
+     *            the y-coordinate of the first point of the second line
+     * @param x4
+     *            the x-coordinate of the second point of the second line
+     * @param y4
+     *            the y-coordinate of the second point of the second line
+     * @return <b>true</b> if two lines coincide.
+     */
+    private static boolean linesStrictlyCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
+            double x4, double y4) {
         // the first line is inside the second line.
         if (pointInLineSegment(x1, y1, x3, y3, x4, y4) && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
             return true;
@@ -369,6 +422,41 @@ public abstract class XcosRouteUtils {
             if (pointInLineSegment(x1, y1, x3, y3, x4, y4) || pointInLineSegment(x2, y2, x3, y3, x4, y4)
                     || pointInLineSegment(x3, y3, x1, y1, x2, y2) || pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether a point is in the Link.
+     * 
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param link
+     * @return <b>true</b> if one point is in the Link.
+     */
+    private static boolean pointInLink(double x, double y, BasicLink link) {
+        List<mxPoint> listPoints = link.getPoints(0, false);
+        if (listPoints == null || listPoints.size() <= 1) {
+        } else {
+            for (int i = 1; i < listPoints.size(); i++) {
+                mxPoint point1 = listPoints.get(i - 1);
+                mxPoint point2 = listPoints.get(i);
+                double x1 = point1.getX();
+                double y1 = point1.getY();
+                double x2 = point2.getX();
+                double y2 = point2.getY();
+                if (x1 == x2 && x != x1) {
+                    continue;
+                }
+                if (y1 == y2 && y != y1) {
+                    continue;
+                }
+                if (pointInLineSegment(x, y, x1, y1, x2, y2)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -391,7 +479,7 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point of the line
      * @return <b>true</b> if the point is in the line segment.
      */
-    private static boolean pointInLineSegment(double x1, double y1, double x2, double y2, double x3, double y3) {
+    protected static boolean pointInLineSegment(double x1, double y1, double x2, double y2, double x3, double y3) {
         if (((x3 - x2) * (y1 - y2) == (x1 - x2) * (y3 - y2)) && (x1 >= Math.min(x2, x3) && x1 <= Math.max(x2, x3))
                 && (y1 >= Math.min(y2, y3) && y1 <= Math.max(y2, y3))) {
             return true;
@@ -440,67 +528,118 @@ public abstract class XcosRouteUtils {
         double y1 = p1.getY();
         double x2 = p2.getX();
         double y2 = p2.getY();
-        // simplest situation
-        if (!checkObstacle(x1, y1, x2, y1, allCells) && !checkObstacle(x2, y1, x2, y2, allCells)) {
-            if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
+        // simplest situation: directly connect.
+        if (o1 == Orientation.EAST || o1 == Orientation.WEST) {
+            // if the start is horizontal,
+            if (!checkObstacle(x1, y1, x2, y1, allCells) && !checkObstacle(x2, y1, x2, y2, allCells)) {
+                listSimpleRoute.add(new mxPoint(x2, y1));
+                if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
+            }
+            if (!checkObstacle(x1, y1, x1, y2, allCells) && !checkObstacle(x1, y2, x2, y2, allCells)) {
                 listSimpleRoute.add(p1);
+                listSimpleRoute.add(new mxPoint(x1, y2));
+                if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
             }
-            listSimpleRoute.add(new mxPoint(x2, y1));
-            if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
-                listSimpleRoute.add(p2);
+        } else if (o1 == Orientation.NORTH || o1 == Orientation.SOUTH) {
+            // if the start is vertical,
+            if (!checkObstacle(x1, y1, x1, y2, allCells) && !checkObstacle(x1, y2, x2, y2, allCells)) {
+                listSimpleRoute.add(new mxPoint(x1, y2));
+                if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
             }
-            return listSimpleRoute;
-        } else if (!checkObstacle(x1, y1, x1, y2, allCells) && !checkObstacle(x1, y2, x2, y2, allCells)) {
-            if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
+            if (!checkObstacle(x1, y1, x2, y1, allCells) && !checkObstacle(x2, y1, x2, y2, allCells)) {
                 listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x1, y2));
-            if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        }
-        // check the nodes in x-coordinate
-        double xmax = Math.max(x1 + distance, x2 + distance);
-        double xmin = Math.min(x1 - distance, x2 - distance);
-        for (double xi = xmin; xi <= xmax; xi++) {
-            if (!checkObstacle(x1, y1, xi, y1, allCells) && !checkObstacle(xi, y1, xi, y2, allCells)
-                    && !checkObstacle(xi, y2, x2, y2, allCells)) {
-                listX.add(xi);
-            }
-        }
-        if (listX.size() > 0) {
-            double x = choosePoint(listX, x1, x2);
-            if (o1 != Orientation.EAST && o1 != Orientation.WEST) {
-                listSimpleRoute.add(p1);
-            }
-            listSimpleRoute.add(new mxPoint(x, y1));
-            listSimpleRoute.add(new mxPoint(x, y2));
-            if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
-                listSimpleRoute.add(p2);
-            }
-            return listSimpleRoute;
-        }
-        // check the nodes in y-coordinate
-        double ymax = Math.max(y1 + distance, y2 + distance);
-        double ymin = Math.min(y1 - distance, y2 - distance);
-        for (double yi = ymin; yi <= ymax; yi++) {
-            if (!checkObstacle(x1, y1, x1, yi, allCells) && !checkObstacle(x1, yi, x2, yi, allCells)
-                    && !checkObstacle(x2, yi, x2, y2, allCells)) {
-                listY.add(yi);
+                listSimpleRoute.add(new mxPoint(x2, y1));
+                if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
             }
         }
-        if (listY.size() > 0) {
-            double y = choosePoint(listY, y1, y2);
-            if (o1 != Orientation.NORTH && o1 != Orientation.SOUTH) {
+        if (o1 == Orientation.EAST || o1 == Orientation.WEST) {
+            // check the nodes in x-coordinate
+            double xmax = Math.max(x1 + distance, x2 + distance);
+            double xmin = Math.min(x1 - distance, x2 - distance);
+            for (double xi = xmin; xi <= xmax; xi++) {
+                if (!checkObstacle(x1, y1, xi, y1, allCells) && !checkObstacle(xi, y1, xi, y2, allCells)
+                        && !checkObstacle(xi, y2, x2, y2, allCells)) {
+                    listX.add(xi);
+                }
+            }
+            if (listX.size() > 0) {
+                double x = choosePoint(listX, x1, x2);
+                listSimpleRoute.add(new mxPoint(x, y1));
+                listSimpleRoute.add(new mxPoint(x, y2));
+                if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
+            }
+            // check the nodes in y-coordinate
+            double ymax = Math.max(y1 + distance, y2 + distance);
+            double ymin = Math.min(y1 - distance, y2 - distance);
+            for (double yi = ymin; yi <= ymax; yi++) {
+                if (!checkObstacle(x1, y1, x1, yi, allCells) && !checkObstacle(x1, yi, x2, yi, allCells)
+                        && !checkObstacle(x2, yi, x2, y2, allCells)) {
+                    listY.add(yi);
+                }
+            }
+            if (listY.size() > 0) {
+                double y = choosePoint(listY, y1, y2);
                 listSimpleRoute.add(p1);
+                listSimpleRoute.add(new mxPoint(x1, y));
+                listSimpleRoute.add(new mxPoint(x2, y));
+                if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
             }
-            listSimpleRoute.add(new mxPoint(x1, y));
-            listSimpleRoute.add(new mxPoint(x2, y));
-            if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
-                listSimpleRoute.add(p2);
+        } else if (o1 == Orientation.NORTH || o1 == Orientation.SOUTH) {
+            // check the nodes in y-coordinate
+            double ymax = Math.max(y1 + distance, y2 + distance);
+            double ymin = Math.min(y1 - distance, y2 - distance);
+            for (double yi = ymin; yi <= ymax; yi++) {
+                if (!checkObstacle(x1, y1, x1, yi, allCells) && !checkObstacle(x1, yi, x2, yi, allCells)
+                        && !checkObstacle(x2, yi, x2, y2, allCells)) {
+                    listY.add(yi);
+                }
             }
-            return listSimpleRoute;
+            if (listY.size() > 0) {
+                double y = choosePoint(listY, y1, y2);
+                listSimpleRoute.add(new mxPoint(x1, y));
+                listSimpleRoute.add(new mxPoint(x2, y));
+                if (o2 != Orientation.NORTH && o2 != Orientation.SOUTH) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
+            }
+            // check the nodes in x-coordinate
+            double xmax = Math.max(x1 + distance, x2 + distance);
+            double xmin = Math.min(x1 - distance, x2 - distance);
+            for (double xi = xmin; xi <= xmax; xi++) {
+                if (!checkObstacle(x1, y1, xi, y1, allCells) && !checkObstacle(xi, y1, xi, y2, allCells)
+                        && !checkObstacle(xi, y2, x2, y2, allCells)) {
+                    listX.add(xi);
+                }
+            }
+            if (listX.size() > 0) {
+                double x = choosePoint(listX, x1, x2);
+                listSimpleRoute.add(p1);
+                listSimpleRoute.add(new mxPoint(x, y1));
+                listSimpleRoute.add(new mxPoint(x, y2));
+                if (o2 != Orientation.EAST && o2 != Orientation.WEST) {
+                    listSimpleRoute.add(p2);
+                }
+                return listSimpleRoute;
+            }
         }
         return listSimpleRoute;
     }
@@ -592,53 +731,137 @@ public abstract class XcosRouteUtils {
         List<mxPoint> listComplexRoute = new ArrayList<mxPoint>(0);
         List<mxPoint> listTmp = new ArrayList<mxPoint>(0);
         listComplexRoute.add(p1);
-        List<mxPoint> listNewP1 = new ArrayList<mxPoint>(0);
-        if (o1 != Orientation.EAST) {
-            mxPoint np1 = new mxPoint(p1.getX() - newPosition, p1.getY());
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.WEST, p2, o2, allCells);
+        Map<Orientation, mxPoint> mapNewP1 = new LinkedHashMap<Orientation, mxPoint>(0);
+        if (o1 == Orientation.EAST || o1 == null) {
+            // to EAST
+            mxPoint npE = new mxPoint(p1.getX() + newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npE.getX(), npE.getY(), allCells)) {
+                listTmp = getSimpleRoute(npE, Orientation.EAST, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
                     return listComplexRoute;
                 }
-                listNewP1.add(np1);
+                mapNewP1.put(Orientation.EAST, npE);
             }
-        }
-        if (o1 != Orientation.WEST) {
-            mxPoint np1 = new mxPoint(p1.getX() + newPosition, p1.getY());
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.EAST, p2, o2, allCells);
+            // to NORTH
+            mxPoint npN = new mxPoint(p1.getX(), p1.getY() - newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npN.getX(), npN.getY(), allCells)) {
+                listTmp = getSimpleRoute(npN, Orientation.NORTH, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
                     return listComplexRoute;
                 }
-                listNewP1.add(np1);
+                mapNewP1.put(Orientation.NORTH, npN);
             }
-        }
-        if (o1 != Orientation.SOUTH) {
-            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() - newPosition);
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.NORTH, p2, o2, allCells);
+            // to SOUTH
+            mxPoint npS = new mxPoint(p1.getX(), p1.getY() + newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npS.getX(), npS.getY(), allCells)) {
+                listTmp = getSimpleRoute(npS, Orientation.SOUTH, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
                     return listComplexRoute;
                 }
-                listNewP1.add(np1);
+                mapNewP1.put(Orientation.SOUTH, npS);
             }
-        }
-        if (o1 != Orientation.NORTH) {
-            mxPoint np1 = new mxPoint(p1.getX(), p1.getY() + newPosition);
-            if (!checkObstacle(p1.getX(), p1.getY(), np1.getX(), np1.getY(), allCells)) {
-                listTmp = getSimpleRoute(np1, Orientation.SOUTH, p2, o2, allCells);
+            if (o1 == null) {
+                // to WEST
+                mxPoint npW = new mxPoint(p1.getX() - newPosition, p1.getY());
+                if (!checkObstacle(p1.getX(), p1.getY(), npW.getX(), npW.getY(), allCells)) {
+                    listTmp = getSimpleRoute(npW, Orientation.WEST, p2, o2, allCells);
+                    if (listTmp != null && listTmp.size() > 0) {
+                        listComplexRoute.addAll(listTmp);
+                        return listComplexRoute;
+                    }
+                    mapNewP1.put(Orientation.WEST, npW);
+                }
+            }
+        } else if (o1 == Orientation.SOUTH) {
+            mxPoint npS = new mxPoint(p1.getX(), p1.getY() + newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npS.getX(), npS.getY(), allCells)) {
+                listTmp = getSimpleRoute(npS, Orientation.SOUTH, p2, o2, allCells);
                 if (listTmp != null && listTmp.size() > 0) {
                     listComplexRoute.addAll(listTmp);
                     return listComplexRoute;
                 }
-                listNewP1.add(np1);
+                mapNewP1.put(Orientation.SOUTH, npS);
+            }
+            mxPoint npW = new mxPoint(p1.getX() - newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npW.getX(), npW.getY(), allCells)) {
+                listTmp = getSimpleRoute(npW, Orientation.WEST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.WEST, npW);
+            }
+            mxPoint npE = new mxPoint(p1.getX() + newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npE.getX(), npE.getY(), allCells)) {
+                listTmp = getSimpleRoute(npE, Orientation.EAST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.EAST, npE);
+            }
+        } else if (o1 == Orientation.WEST) {
+            mxPoint npW = new mxPoint(p1.getX() - newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npW.getX(), npW.getY(), allCells)) {
+                listTmp = getSimpleRoute(npW, Orientation.WEST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.WEST, npW);
+            }
+            mxPoint npN = new mxPoint(p1.getX(), p1.getY() - newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npN.getX(), npN.getY(), allCells)) {
+                listTmp = getSimpleRoute(npN, Orientation.NORTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.NORTH, npN);
+            }
+            mxPoint npS = new mxPoint(p1.getX(), p1.getY() + newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npS.getX(), npS.getY(), allCells)) {
+                listTmp = getSimpleRoute(npS, Orientation.SOUTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.SOUTH, npS);
+            }
+        } else if (o1 == Orientation.NORTH) {
+            mxPoint npN = new mxPoint(p1.getX(), p1.getY() - newPosition);
+            if (!checkObstacle(p1.getX(), p1.getY(), npN.getX(), npN.getY(), allCells)) {
+                listTmp = getSimpleRoute(npN, Orientation.NORTH, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.NORTH, npN);
+            }
+            mxPoint npW = new mxPoint(p1.getX() - newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npW.getX(), npW.getY(), allCells)) {
+                listTmp = getSimpleRoute(npW, Orientation.WEST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.WEST, npW);
+            }
+            mxPoint npE = new mxPoint(p1.getX() + newPosition, p1.getY());
+            if (!checkObstacle(p1.getX(), p1.getY(), npE.getX(), npE.getY(), allCells)) {
+                listTmp = getSimpleRoute(npE, Orientation.EAST, p2, o2, allCells);
+                if (listTmp != null && listTmp.size() > 0) {
+                    listComplexRoute.addAll(listTmp);
+                    return listComplexRoute;
+                }
+                mapNewP1.put(Orientation.EAST, npE);
             }
         }
-        for (mxPoint np1 : listNewP1) {
-            listTmp = getComplexRoute(np1, null, p2, o2, allCells, times - 1);
+        for (Map.Entry<Orientation, mxPoint> np1 : mapNewP1.entrySet()) {
+            listTmp = getComplexRoute(np1.getValue(), np1.getKey(), p2, o2, allCells, times - 1);
             if (listTmp != null && listTmp.size() > 1) {
                 listComplexRoute.addAll(listTmp);
                 return listComplexRoute;
@@ -685,6 +908,51 @@ public abstract class XcosRouteUtils {
             orientation = Orientation.NORTH;
         }
         return orientation;
+    }
+
+    /**
+     * Get the position of the source/target of a link. If dest is true, return source's position.
+     * If dest is false, return target's position.
+     * 
+     * @param link
+     * @param dest
+     * @return the point of the position
+     */
+    private static mxPoint getLinkPortPosition(BasicLink link, boolean dest) {
+        mxPoint point = new mxPoint();
+        mxICell port = null;
+        if (dest) {
+            port = link.getSource();
+        } else {
+            port = link.getTarget();
+        }
+        if (port == null) {
+            return null;
+        }
+        if (port.getParent() instanceof SplitBlock) {
+            SplitBlock block = (SplitBlock) port.getParent();
+            point.setX(block.getGeometry().getCenterX());
+            point.setY(block.getGeometry().getCenterY());
+        } else if (port.getParent() instanceof BasicBlock) {
+            mxGeometry portGeo = port.getGeometry();
+            double portX = portGeo.getCenterX();
+            double portY = portGeo.getCenterY();
+            double portW = portGeo.getWidth();
+            double portH = portGeo.getHeight();
+            BasicBlock parent = (BasicBlock) port.getParent();
+            mxGeometry parentGeo = parent.getGeometry();
+            double blockX = parentGeo.getX();
+            double blockY = parentGeo.getY();
+            double blockW = parentGeo.getWidth();
+            double blockH = parentGeo.getHeight();
+            if (portGeo.isRelative()) {
+                portX *= blockW;
+                portY *= blockH;
+            }
+            point.setX(blockX + portX + portW / 2);
+            point.setY(blockY + portY + portH / 2);
+        }
+        return point;
     }
 
 }
