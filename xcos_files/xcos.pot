@@ -89,7 +89,7 @@ msgstr ""
 
 #
 # File: scilab_fake_localization_file.c, line:
-# File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 
+# File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 295
 msgid "Optimal"
 msgstr ""
 
@@ -1152,6 +1152,16 @@ msgstr ""
 # File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 199
 msgid "Middle"
 msgstr ""
+
+#
+# File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 296
+msgid "Blocks Auto Position"
+msgstr ""
+
+#
+# File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 297
+msgid "Blocks Position Split Blocks"
+msgstr "Split Blocks - Auto Position"
 
 #
 # File: src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 201
