@@ -8,18 +8,21 @@ This is my contribution to Scilab development.
 It is to provide some options for users to automatically beautify the layout of Xcos schema.
 Xcos is a Scilab tool dedicated to the modeling and simulation of dynamic systems including continuous and discrete models. Xcos provides a graphical editor which allows to represent models with block diagrams by connecting the blocks to each other. Each block represents a function. However, as the number of the blocks increases, an Xcos schema can become quickly messy. This idea of is to provide options to automatically update the layout of an Xcos schema and keep the digrams well-presented.
 
-- [GSoC 2015 - Part I](#GSoC 2015 - Part I)
- - [Schedule](#I-Schedule)
- - [Functionality](#I-Functionality)
- - [Task](#I-Task)
- - [Result](#I-Result)
-- [GSoC 2015 - Part II](#GSoC 2015 - Part II)
- - [Schedule](#II-Schedule)
- - [Functionality](#II-Functionality)
- - [Task](#II-Task)
- - [Result](#II-Result)
+Table of contents
+-----------------
 
-## [GSoC 2015 - Part I](http://www.google-melange.com/gsoc/project/details/google/gsoc2015/zhuchenfeng/5724160613416960):
+  * [GSoC 2015 - Part I](#gsoc2015-part-i)
+    * [Schedule](#i-schedule)
+    * [Functionality](#i-functionality)
+    * [Task](#i-task)
+    * [Result](#i-result)
+  * [GSoC 2016 - Part II](#gsoc2016-part-ii)
+    * [Schedule](#ii-schedule)
+    * [Functionality](#ii-functionality)
+    * [Task](#ii-task)
+    * [Result](#ii-result)
+
+## [GSoC2015 Part I](http://www.google-melange.com/gsoc/project/details/google/gsoc2015/zhuchenfeng/5724160613416960):
 
 ### I-Schedule
 
@@ -60,7 +63,7 @@ The diagram after using OLS:
 ![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/OLS02.png?raw=true)
 
 
-## [GSoC 2016 - Part II](https://summerofcode.withgoogle.com/projects/#6654261857353728)
+## [GSoC2016 Part II](https://summerofcode.withgoogle.com/projects/#6654261857353728)
 
 ### II-Schedule
 
