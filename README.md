@@ -26,7 +26,7 @@ Xcos is a Scilab tool dedicated to the modeling and simulation of dynamic system
 ### Functionality
 
 - [x] Optimal Link Style (OLS)
-- [ ] Block Automatic Position - Split Blocks
+- [ ] Block Automatic Position - Split Blocks (BAP - SBAP)
 
 ### Task
 
@@ -40,6 +40,13 @@ Relative files:
 
 ### Result
 
+A diagram in original version:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/OLS01.png?raw=true)
+
+The diagram after using OLS:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/OLS02.png?raw=true)
 
 
 ## [GSoC 2016 - Part II](https://summerofcode.withgoogle.com/projects/#6654261857353728)
@@ -60,4 +67,9 @@ Relative files:
 - [ ] Automatic Layout Preview
 
 ### Task
+
+
+### Result
+
+
 
