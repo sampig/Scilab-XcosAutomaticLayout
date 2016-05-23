@@ -8,9 +8,20 @@ This is my contribution to Scilab development.
 It is to provide some options for users to automatically beautify the layout of Xcos schema.
 Xcos is a Scilab tool dedicated to the modeling and simulation of dynamic systems including continuous and discrete models. Xcos provides a graphical editor which allows to represent models with block diagrams by connecting the blocks to each other. Each block represents a function. However, as the number of the blocks increases, an Xcos schema can become quickly messy. This idea of is to provide options to automatically update the layout of an Xcos schema and keep the digrams well-presented.
 
+- [GSoC 2015 - Part I](#GSoC 2015 - Part I)
+ - [Schedule](#I-Schedule)
+ - [Functionality](#I-Functionality)
+ - [Task](#I-Task)
+ - [Result](#I-Result)
+- [GSoC 2015 - Part II](#GSoC 2015 - Part II)
+ - [Schedule](#II-Schedule)
+ - [Functionality](#II-Functionality)
+ - [Task](#II-Task)
+ - [Result](#II-Result)
+
 ## [GSoC 2015 - Part I](http://www.google-melange.com/gsoc/project/details/google/gsoc2015/zhuchenfeng/5724160613416960):
 
-### Schedule
+### I-Schedule
 
 1. Week01 - Literature survey about automatic layout (05.25-05.31): Preparation and Literature survey.
 2. Week02 - Getting started with JGraphX (06.01-06.07): Literature research and JGraphX research.
@@ -23,12 +34,12 @@ Xcos is a Scilab tool dedicated to the modeling and simulation of dynamic system
 7. Week10-11 - Integration and testing (07.27-08.09).
 8. Week12 - Final (08.10-08.16).
 
-### Functionality
+### I-Functionality
 
 - [x] Optimal Link Style (OLS)
 - [ ] Block Automatic Position - Split Blocks (BAP - SBAP)
 
-### Task
+### I-Task
 
 Relative files:
 
@@ -38,7 +49,7 @@ Relative files:
 | ~.utils  | XcosRoute  | Compute route |
 | ~.utils  | XcosRouteUtils  | Common utilities |
 
-### Result
+### I-Result
 
 A diagram in original version:
 
@@ -51,7 +62,7 @@ The diagram after using OLS:
 
 ## [GSoC 2016 - Part II](https://summerofcode.withgoogle.com/projects/#6654261857353728)
 
-### Schedule
+### II-Schedule
 
 1. Week01 - Check the previous feature (05.23-05.29): Review my previous work based on the latest master branch. Check whether everything works well and try to improve Optimal Link Style if possible.
 2. Week02-03 - Automatic Position of Split Block (05.30-06.12): Implement this feature. Test it and make a commit.
@@ -60,16 +71,16 @@ The diagram after using OLS:
 5. Week10-11 - Auto-rearrange its Link When Moving a Block (07.25-08.07): Implement this feature. Test it and make a commit.
 6. Week12 - Final (12th Week): Beautify codes, make final commits and write documentation.
 
-### Functionality
+### II-Functionality
 
 - [ ] Block Automatic Position - Split Blocks
 - [ ] Block Automatic Position - Basic Blocks
 - [ ] Automatic Layout Preview
 
-### Task
+### II-Task
 
 
-### Result
+### II-Result
 
 
 
