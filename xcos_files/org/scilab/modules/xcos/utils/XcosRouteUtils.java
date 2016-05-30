@@ -61,7 +61,7 @@ public abstract class XcosRouteUtils {
     /**
      * Check whether the two points are strictly aligned(vertical or horizontal) or not. (The
      * accepted error is <code>XcosRoute.ALIGN_STRICT_ERROR</code>)
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point
      * @param y1
@@ -85,7 +85,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Get all points of one link including the source port and target port.
-     * 
+     *
      * @param link
      * @return
      */
@@ -149,7 +149,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether there are blocks between two points.
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point of the line
      * @param y1
@@ -200,7 +200,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether a point is in the range of one block (including the ports).
-     * 
+     *
      * @param x
      *            the x-coordinate of the point
      * @param y
@@ -224,7 +224,7 @@ public abstract class XcosRouteUtils {
                         continue;
                     }
                     mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry().getY(),
-                            child.getGeometry().getWidth(), child.getGeometry().getHeight());
+                                                         child.getGeometry().getWidth(), child.getGeometry().getHeight());
                     if (child.getGeometry().isRelative()) {
                         childGeo.setX(g.getWidth() * childGeo.getX());
                         childGeo.setY(g.getHeight() * childGeo.getY());
@@ -258,7 +258,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether two lines have intersection or not.
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point of the first line
      * @param y1
@@ -294,7 +294,7 @@ public abstract class XcosRouteUtils {
     /**
      * Check whether two lines coincide or not. The lines are vertical or horizontal. <br/>
      * <b>NOTE:</b> This method is used to check coincidence, NOT intersection!
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point of the first line
      * @param y1
@@ -335,7 +335,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether two lines coincide or not.
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point of the first line
      * @param y1
@@ -355,7 +355,7 @@ public abstract class XcosRouteUtils {
      * @return <b>true</b> if two lines coincide.
      */
     private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
-            double x4, double y4) {
+                                         double x4, double y4) {
         x1 = Math.round(x1);
         y1 = Math.round(y1);
         x2 = Math.round(x2);
@@ -387,7 +387,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether two lines strictly coincide or not.
-     * 
+     *
      * @param x1
      *            the x-coordinate of the first point of the first line
      * @param y1
@@ -429,7 +429,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether a point is in the Link.
-     * 
+     *
      * @param x
      *            the x-coordinate of the point
      * @param y
@@ -464,7 +464,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Check whether the point is in the line segment or not.
-     * 
+     *
      * @param x1
      *            the x-coordinate of the point
      * @param y1
@@ -489,7 +489,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * In the method, only 4 turning points at most are supported.
-     * 
+     *
      * @param p1
      *            the point away from the first port
      * @param p2
@@ -504,7 +504,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * In the method, only 4 turning points at most are supported.
-     * 
+     *
      * @param p1
      *            the point away from the first port
      * @param o1
@@ -647,7 +647,7 @@ public abstract class XcosRouteUtils {
     /**
      * Choose a better point (which is the average number in the widest range in a certain density)
      * from the list which contains discrete numbers.
-     * 
+     *
      * @param list
      * @return
      */
@@ -683,7 +683,7 @@ public abstract class XcosRouteUtils {
                     end_temp = list.get(i);
                     restart = true;
                 } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
-                        || (mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax)) {
+                           || (mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax)) {
                     // if the new one in between two points and the previous one
                     // is out of them, or if the new one is longer than the
                     // previous one,
@@ -699,7 +699,7 @@ public abstract class XcosRouteUtils {
         mid = (end + start) / 2;
         if ((mid_temp < nMin || mid_temp > nMax) && (mid < nMax && mid > nMin)) {
         } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
-                || ((mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax))) {
+                   || ((mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax))) {
             start = start_temp;
             end = end_temp;
         }
@@ -708,7 +708,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Based on getSimpleRoute().
-     * 
+     *
      * @param p1
      *            the point away from the first port
      * @param o1
@@ -873,7 +873,7 @@ public abstract class XcosRouteUtils {
 
     /**
      * Get the Orientation of a port to its parent.
-     * 
+     *
      * @param port
      * @return
      */
@@ -913,7 +913,7 @@ public abstract class XcosRouteUtils {
     /**
      * Get the position of the source/target of a link. If dest is true, return source's position.
      * If dest is false, return target's position.
-     * 
+     *
      * @param link
      * @param dest
      * @return the point of the position

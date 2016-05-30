@@ -1,6 +1,6 @@
 /*
  * Scilab ( http://www.scilab.org/ ) - This file is part of Scilab
- * Copyright (C) 2015 - Chenfeng ZHU
+ * Copyright (C) 2016 - Chenfeng ZHU
  *
  * This file must be used under the terms of the CeCILL.
  * This source file is licensed as described in the file COPYING, which
@@ -33,12 +33,11 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Change the position of the SplitBlocks including their links.
-     * 
+     *
      * @param graph
      * @param cells
      */
     public static void changeSplitBlocksPosition(XcosDiagram graph, Object[] cells) {
-        graph.setCellStyle(null, cells);
         Object[] all = graph.getChildCells(graph.getDefaultParent());
         for (Object o : cells) {
             if (o instanceof SplitBlock) {
@@ -50,7 +49,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Change the position of the SplitBlock including its links.
-     * 
+     *
      * @param splitblock
      * @param all
      * @param graph
@@ -64,15 +63,16 @@ public abstract class BlockAutoPositionUtils {
         List<mxPoint> list1 = getRoute(sourceCell, targetCell1, all, graph);
         List<mxPoint> list2 = getRoute(sourceCell, targetCell2, all, graph);
         mxPoint point = getSplitPoint(list1, list2);
-        mxGeometry splitGeo = splitblock.getGeometry();
+        mxGeometry splitGeo = (mxGeometry) graph.getModel().getGeometry(splitblock).clone();
         splitGeo.setX(point.getX() - splitGeo.getWidth() / 2);
         splitGeo.setY(point.getY() - splitGeo.getHeight() / 2);
+        graph.getModel().setGeometry(splitblock, splitGeo);
         updateSplitLink(splitblock, all, graph);
     }
 
     /**
      * Get the source of a SplitBlock.
-     * 
+     *
      * @param splitblock
      * @return
      */
@@ -88,7 +88,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Get the target of a SplitBlock according to its Output.
-     * 
+     *
      * @param split
      * @param out
      * @return
@@ -104,7 +104,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Get the route for the source and the target ignoring the SplitBlock.
-     * 
+     *
      * @param source
      * @param target
      * @param all
@@ -114,7 +114,7 @@ public abstract class BlockAutoPositionUtils {
     private static List<mxPoint> getRoute(mxICell source, mxICell target, Object[] all, XcosDiagram graph) {
         XcosRoute util = new XcosRoute();
         Object[] allOtherCells = util.getAllOtherCells(all, source, target, source.getEdgeAt(0),
-                target.getEdgeAt(0));
+                                 target.getEdgeAt(0));
         List<mxPoint> list = new ArrayList<mxPoint>(0);
         if (source != null) {
             list.add(getPortPosition(source));
@@ -131,7 +131,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Get the position of a port.
-     * 
+     *
      * @param port
      * @return
      */
@@ -168,7 +168,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Get the split point for the two routes.
-     * 
+     *
      * @param list1
      * @param list2
      * @return
@@ -210,7 +210,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Update the links of a SplitBlock.
-     * 
+     *
      * @param split
      * @param all
      * @param graph
@@ -230,7 +230,7 @@ public abstract class BlockAutoPositionUtils {
 
     /**
      * Reset the link.
-     * 
+     *
      * @param graph
      * @param edge
      */
