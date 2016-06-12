@@ -751,13 +751,12 @@ public class BasicBlock extends XcosCell implements Serializable {
         /*--- */
         format.addSeparator();
         /*--- */
-        Menu autoPositionMenu = ScilabMenu.createMenu();
-        autoPositionMenu.setText(XcosMessages.BLOCK_AUTO_POSITION);
         MenuItem sbapMenuItem = AutoPositionSplitBlockAction.createMenu(graph);
+        sbapMenuItem.setText(XcosMessages.BLOCK_AUTO_POSITION);
+        sbapMenuItem.setVisible(false);
         sbapMenuItem.setEnabled(false);
-        autoPositionMenu.add(sbapMenuItem);
         menuList.put(AutoPositionSplitBlockAction.class, sbapMenuItem);
-        format.add(autoPositionMenu);
+        format.add(sbapMenuItem);
         /*--- */
         format.addSeparator();
         /*--- */

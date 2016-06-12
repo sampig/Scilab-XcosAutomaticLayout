@@ -51,6 +51,7 @@ public final class SplitBlock extends BasicBlock {
      */
     @Override
     protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList) {
+        menuList.get(AutoPositionSplitBlockAction.class).setVisible(true);
         menuList.get(AutoPositionSplitBlockAction.class).setEnabled(true);
     }
 
