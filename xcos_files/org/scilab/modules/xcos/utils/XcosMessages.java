@@ -314,6 +314,7 @@ public final class XcosMessages {
     public static final String LINK_STYLE_OPTIMAL = Messages.gettext("Optimal");
     public static final String BLOCK_AUTO_POSITION = Messages.gettext("Block Auto Position");
     public static final String BLOCK_AUTO_POSITION_SPLIT_BLOCK = Messages.gettext("BAP - Split Block");
+    public static final String OLS_ROUTE_NOT_FOUND = Messages.gettext("Optimal route cannot be found.");
 
     // CSON: JavadocVariable
     // CSON: LineLength

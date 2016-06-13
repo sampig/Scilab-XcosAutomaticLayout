@@ -338,9 +338,9 @@ public class XcosTab extends SwingScilabDockablePanel implements SimpleTab {
             BarUpdater.updateBars(tab.getParentWindowId(), tab.getMenuBar(), tab.getToolBar(), tab.getInfoBar(), tab.getName(), tab.getWindowIcon());
         }
 
-        ClosingOperationsManager.addDependencyWithRoot((SwingScilabDockablePanel) tab);
-        ClosingOperationsManager.registerClosingOperation((SwingScilabDockablePanel) tab, new ClosingOperation(graph));
-        WindowsConfigurationManager.registerEndedRestoration((SwingScilabDockablePanel) tab, new EndedRestoration(graph));
+        ClosingOperationsManager.addDependencyWithRoot(tab);
+        ClosingOperationsManager.registerClosingOperation(tab, new ClosingOperation(graph));
+        WindowsConfigurationManager.registerEndedRestoration(tab, new EndedRestoration(graph));
     }
 
     /*
@@ -494,7 +494,7 @@ public class XcosTab extends SwingScilabDockablePanel implements SimpleTab {
         format.add(BorderColorAction.createMenu(diagram));
         format.add(FilledColorAction.createMenu(diagram));
         format.addSeparator();
-        
+
         blockPosition = ScilabMenu.createMenu();
         blockPosition.setText(XcosMessages.BLOCK_AUTO_POSITION);
         blockPosition.add(AutoPositionSplitBlockAction.createMenu(diagram));

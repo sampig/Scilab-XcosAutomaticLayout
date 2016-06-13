@@ -20,6 +20,7 @@ import org.scilab.modules.xcos.graph.XcosDiagram;
 import org.scilab.modules.xcos.graph.swing.handler.SelectionCellsHandler;
 import org.scilab.modules.xcos.link.BasicLink;
 import org.scilab.modules.xcos.port.BasicPort;
+import org.scilab.modules.xcos.port.Orientation;
 
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
@@ -63,6 +64,7 @@ public abstract class BlockAutoPositionUtils {
         List<mxPoint> list1 = getRoute(sourceCell, targetCell1, all, graph);
         List<mxPoint> list2 = getRoute(sourceCell, targetCell2, all, graph);
         mxPoint point = getSplitPoint(list1, list2);
+        updatePortOrientation(splitblock, list1, list2, point);
         mxGeometry splitGeo = (mxGeometry) graph.getModel().getGeometry(splitblock).clone();
         splitGeo.setX(point.getX() - splitGeo.getWidth() / 2);
         splitGeo.setY(point.getY() - splitGeo.getHeight() / 2);
@@ -109,12 +111,12 @@ public abstract class BlockAutoPositionUtils {
      * @param target
      * @param all
      * @param graph
-     * @return
+     * @return all the turning points in the route including the start and end points
      */
     private static List<mxPoint> getRoute(mxICell source, mxICell target, Object[] all, XcosDiagram graph) {
         XcosRoute util = new XcosRoute();
         Object[] allOtherCells = util.getAllOtherCells(all, source, target, source.getEdgeAt(0),
-                                 target.getEdgeAt(0));
+                target.getEdgeAt(0));
         List<mxPoint> list = new ArrayList<mxPoint>(0);
         if (source != null) {
             list.add(getPortPosition(source));
@@ -208,6 +210,98 @@ public abstract class BlockAutoPositionUtils {
         return point;
     }
 
+    private static void updatePortOrientation(SplitBlock split, List<mxPoint> list1, List<mxPoint> list2, mxPoint splitPoint) {
+        BasicPort inport = split.getIn();
+        BasicPort outport1 = split.getOut1();
+        BasicPort outport2 = split.getOut2();
+        double x = splitPoint.getX();
+        double y = splitPoint.getY();
+        int num1 = list1.size();
+        if (num1 <= 1) {
+            return;
+        }
+        for (int i = 1; i < num1; i++) {
+            mxPoint p0 = list1.get(i - 1);
+            mxPoint p1 = list1.get(i);
+            double x0 = p0.getX();
+            double y0 = p0.getY();
+            double x1 = p1.getX();
+            double y1 = p1.getY();
+            // if the point is in this segment,
+            if (XcosRouteUtils.pointInLineSegment(x, y, x0, y0, x1, y1)) {
+                if (x1 == x0 && y1 > y0) { // segment: south
+                    inport.setOrientation(Orientation.NORTH);
+                    outport1.setOrientation(Orientation.SOUTH);
+                } else if (x1 == x0 && y1 < y0) { // segment: north
+                    inport.setOrientation(Orientation.SOUTH);
+                    outport1.setOrientation(Orientation.NORTH);
+                } else if (y1 == y0 && x1 > x0) { // segment: east
+                    inport.setOrientation(Orientation.WEST);
+                    outport1.setOrientation(Orientation.EAST);
+                } else if (y1 == y0 && x1 < x0) { // segment: west
+                    inport.setOrientation(Orientation.EAST);
+                    outport1.setOrientation(Orientation.WEST);
+                }
+                // if the point is in the next turning point,
+                if (x == x1 && y == y1 && i+1 != num1) {
+                    mxPoint p2 = list1.get(i+1);
+                    double x2 = p2.getX();
+                    double y2 = p2.getY();
+                    if (x == x2 && y < y2) { // segment: south
+                        outport1.setOrientation(Orientation.SOUTH);
+                    } else if (x == x2 && y > y2) { // segment: north
+                        outport1.setOrientation(Orientation.NORTH);
+                    } else if (y == y2 && x < x2) { // segment: east
+                        outport1.setOrientation(Orientation.EAST);
+                    } else if (y == y2 && x > x2) { // segment: west
+                        outport1.setOrientation(Orientation.WEST);
+                    }
+                }
+                break;
+            }
+        }
+        int num2 = list2.size();
+        if (num2 <= 1) {
+            return;
+        }
+        for (int i = 1; i < num2; i++) {
+            mxPoint p0 = list2.get(i - 1);
+            mxPoint p1 = list2.get(i);
+            double x0 = p0.getX();
+            double y0 = p0.getY();
+            double x1 = p1.getX();
+            double y1 = p1.getY();
+            // if the point is in this segment,
+            if (XcosRouteUtils.pointInLineSegment(x, y, x0, y0, x1, y1)) {
+                if (x1 == x0 && y1 > y0) { // segment: south
+                    outport2.setOrientation(Orientation.SOUTH);
+                } else if (x1 == x0 && y1 < y0) { // segment: north
+                    outport2.setOrientation(Orientation.NORTH);
+                } else if (y1 == y0 && x1 > x0) { // segment: east
+                    outport2.setOrientation(Orientation.EAST);
+                } else if (y1 == y0 && x1 < x0) { // segment: west
+                    outport2.setOrientation(Orientation.WEST);
+                }
+                // if the point is in the next turning point,
+                if (x == x1 && y == y1 && i+1 != num2) {
+                    mxPoint p2 = list2.get(i+1);
+                    double x2 = p2.getX();
+                    double y2 = p2.getY();
+                    if (x == x2 && y < y2) { // segment: south
+                        outport2.setOrientation(Orientation.SOUTH);
+                    } else if (x == x2 && y > y2) { // segment: north
+                        outport2.setOrientation(Orientation.NORTH);
+                    } else if (y == y2 && x < x2) { // segment: east
+                        outport2.setOrientation(Orientation.EAST);
+                    } else if (y == y2 && x > x2) { // segment: west
+                        outport2.setOrientation(Orientation.WEST);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     /**
      * Update the links of a SplitBlock.
      *
@@ -218,14 +312,15 @@ public abstract class BlockAutoPositionUtils {
     private static void updateSplitLink(SplitBlock split, Object[] all, XcosDiagram graph) {
         XcosRoute route = new XcosRoute();
         BasicLink link = (BasicLink) split.getIn().getEdgeAt(0);
+        boolean lockPort = true;
         reset(graph, link);
-        route.updateRoute(link, all, graph);
+        route.updateRoute(link, all, graph, lockPort);
         link = (BasicLink) split.getOut1().getEdgeAt(0);
         reset(graph, link);
-        route.updateRoute(link, all, graph);
+        route.updateRoute(link, all, graph, lockPort);
         link = (BasicLink) split.getOut2().getEdgeAt(0);
         reset(graph, link);
-        route.updateRoute(link, all, graph);
+        route.updateRoute(link, all, graph, lockPort);
     }
 
     /**
