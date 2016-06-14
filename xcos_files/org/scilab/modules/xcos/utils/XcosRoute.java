@@ -21,6 +21,7 @@ import org.scilab.modules.gui.messagebox.ScilabModalDialog.IconType;
 import org.scilab.modules.xcos.XcosTab;
 import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.block.SplitBlock;
+import org.scilab.modules.xcos.block.TextBlock;
 import org.scilab.modules.xcos.graph.XcosDiagram;
 import org.scilab.modules.xcos.link.BasicLink;
 import org.scilab.modules.xcos.port.BasicPort;
@@ -490,8 +491,8 @@ public class XcosRoute {
         List<Object> listnew = new ArrayList<Object>(0);
         for (Object o : all) {
             // if it does not belongs to self,
-            if (!listNotObs.contains(o) && !(o instanceof SplitBlock)) {
-                // only add normal Blocks.
+            if (!listNotObs.contains(o) && !(o instanceof SplitBlock) && !(o instanceof TextBlock)) {
+                // only add normal Blocks excluding SplitBlock and TextBlock.
                 listnew.add(o);
                 // add the ports of the block.
                 if (o instanceof BasicBlock) {

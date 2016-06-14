@@ -224,7 +224,7 @@ public abstract class XcosRouteUtils {
                         continue;
                     }
                     mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry().getY(),
-                                                         child.getGeometry().getWidth(), child.getGeometry().getHeight());
+                            child.getGeometry().getWidth(), child.getGeometry().getHeight());
                     if (child.getGeometry().isRelative()) {
                         childGeo.setX(g.getWidth() * childGeo.getX());
                         childGeo.setY(g.getHeight() * childGeo.getY());
@@ -355,7 +355,7 @@ public abstract class XcosRouteUtils {
      * @return <b>true</b> if two lines coincide.
      */
     private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
-                                         double x4, double y4) {
+            double x4, double y4) {
         x1 = Math.round(x1);
         y1 = Math.round(y1);
         x2 = Math.round(x2);
@@ -425,6 +425,48 @@ public abstract class XcosRouteUtils {
             }
         }
         return false;
+    }
+
+    /**
+     * Return the intersection of two lines as an mxPoint.
+     * If two lines are superposition, return the last point.
+     *
+     * @param x1
+     *            the x-coordinate of the first point of the first line
+     * @param y1
+     *            the y-coordinate of the first point of the first line
+     * @param x2
+     *            the x-coordinate of the second point of the first line
+     * @param y2
+     *            the y-coordinate of the second point of the first line
+     * @param x3
+     *            the x-coordinate of the first point of the second line
+     * @param y3
+     *            the y-coordinate of the first point of the second line
+     * @param x4
+     *            the x-coordinate of the second point of the second line
+     * @param y4
+     *            the y-coordinate of the second point of the second line
+     * @return the intersection between the two lines.
+     */
+    public static mxPoint getIntersection(double x1, double y1, double x2, double y2, double x3, double y3,
+            double x4, double y4) {
+        x1 = Math.round(x1);
+        y1 = Math.round(y1);
+        x2 = Math.round(x2);
+        y2 = Math.round(y2);
+        x3 = Math.round(x3);
+        y3 = Math.round(y3);
+        x4 = Math.round(x4);
+        y4 = Math.round(y4);
+        if (linesStrictlyCoincide(x1, y1, x2, y2, x3, y3, x4, y4)) {
+            if (pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
+                return new mxPoint(x2, y2);
+            } else if (pointInLineSegment(x4, y4, x1, y1, x2, y2)) {
+                return new mxPoint(x4, y4);
+            }
+        }
+        return mxUtils.intersection(x1, y1, x2, y2, x3, y3, x4, y4);
     }
 
     /**
@@ -683,7 +725,7 @@ public abstract class XcosRouteUtils {
                     end_temp = list.get(i);
                     restart = true;
                 } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
-                           || (mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax)) {
+                        || (mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax)) {
                     // if the new one in between two points and the previous one
                     // is out of them, or if the new one is longer than the
                     // previous one,
@@ -699,7 +741,7 @@ public abstract class XcosRouteUtils {
         mid = (end + start) / 2;
         if ((mid_temp < nMin || mid_temp > nMax) && (mid < nMax && mid > nMin)) {
         } else if ((Math.abs(end_temp - start_temp) > Math.abs(end - start))
-                   || ((mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax))) {
+                || ((mid_temp < nMax && mid_temp > nMin) && (mid < nMin || mid > nMax))) {
             start = start_temp;
             end = end_temp;
         }

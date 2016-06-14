@@ -181,45 +181,83 @@ public abstract class BlockAutoPositionUtils {
         if (num <= 1 || !list1.get(0).equals(list2.get(0))) {
             return null;
         }
-        for (int i = 1; i < num; i++) {
-            mxPoint p0 = list1.get(i - 1);
-            mxPoint p1 = list1.get(i);
-            mxPoint p2 = list2.get(i);
-            if (p1.equals(p2)) {
-                continue;
-            }
-            double x0 = p0.getX();
-            double y0 = p0.getY();
-            double x1 = p1.getX();
-            double y1 = p1.getY();
-            double x2 = p2.getX();
-            double y2 = p2.getY();
-            if (XcosRouteUtils.pointInLineSegment(x1, y1, x0, y0, x2, y2)) {
-                // p1 in the line segment (p0,p2)
-                point = (mxPoint) p1.clone();
-                break;
-            } else if (XcosRouteUtils.pointInLineSegment(x2, y2, x0, y0, x1, y1)) {
-                // p2 in the line segment (p0,p1)
-                point = (mxPoint) p2.clone();
-                break;
-            } else {
-                point = (mxPoint) p0.clone();
-                break;
+        // check the last intersection of two links
+        int iList1 = 1;
+        int iList2 = 1;
+        for (int i = iList1; i < list1.size(); i++) {
+            for (int j = iList2; j < list2.size(); j++) {
+                mxPoint p1 = list1.get(i - 1);
+                mxPoint p2 = list1.get(i);
+                mxPoint p3 = list2.get(j - 1);
+                mxPoint p4 = list2.get(j);
+                double x1 = p1.getX();
+                double y1 = p1.getY();
+                double x2 = p2.getX();
+                double y2 = p2.getY();
+                double x3 = p3.getX();
+                double y3 = p3.getY();
+                double x4 = p4.getX();
+                double y4 = p4.getY();
+                mxPoint p0 = XcosRouteUtils.getIntersection(x1, y1, x2, y2, x3, y3, x4, y4);
+                if (p0 != null) {
+                    iList1 = i;
+                    iList2 = j;
+                    point = (mxPoint) p0.clone();
+                }
             }
         }
         return point;
     }
 
+    /**
+     * Update port orientation.
+     *
+     * @param split
+     * @param list1
+     * @param list2
+     * @param splitPoint
+     */
     private static void updatePortOrientation(SplitBlock split, List<mxPoint> list1, List<mxPoint> list2, mxPoint splitPoint) {
         BasicPort inport = split.getIn();
         BasicPort outport1 = split.getOut1();
         BasicPort outport2 = split.getOut2();
-        double x = splitPoint.getX();
-        double y = splitPoint.getY();
+        Orientation orientationIn = getInportOrientation(list1, list2, splitPoint);
+        if(orientationIn!=null) {
+            inport.setOrientation(orientationIn);
+        }
+        Orientation orientationOut1 = getOutportOrientation(list1, splitPoint);
+        if (orientationOut1 != null) {
+            outport1.setOrientation(orientationOut1);
+        }
+        Orientation orientationOut2 = getOutportOrientation(list2, splitPoint);
+        if (orientationOut2 != null) {
+            outport2.setOrientation(orientationOut2);
+        }
+    }
+
+    /**
+     * Get the orientation for the Input Port of a Split Block.
+     *
+     * @param list1 the first optimal route including the start Port and the end Port
+     * @param list2 the second optimal route including the start Port and the end Port
+     * @param splitPoint the new position for the Split Block
+     * @return
+     */
+    private static Orientation getInportOrientation(List<mxPoint> list1, List<mxPoint> list2, mxPoint splitPoint) {
         int num1 = list1.size();
         if (num1 <= 1) {
-            return;
+            return null;
         }
+        int num2 = list2.size();
+        if (num2 <= 1) {
+            return null;
+        }
+        double x = splitPoint.getX();
+        double y = splitPoint.getY();
+        int turning1 = 1;
+        int turning2 = 1;
+        Orientation orientation1 = null;
+        Orientation orientation2 = null;
         for (int i = 1; i < num1; i++) {
             mxPoint p0 = list1.get(i - 1);
             mxPoint p1 = list1.get(i);
@@ -229,40 +267,18 @@ public abstract class BlockAutoPositionUtils {
             double y1 = p1.getY();
             // if the point is in this segment,
             if (XcosRouteUtils.pointInLineSegment(x, y, x0, y0, x1, y1)) {
+                turning1 = i;
                 if (x1 == x0 && y1 > y0) { // segment: south
-                    inport.setOrientation(Orientation.NORTH);
-                    outport1.setOrientation(Orientation.SOUTH);
+                    orientation1 = Orientation.NORTH;
                 } else if (x1 == x0 && y1 < y0) { // segment: north
-                    inport.setOrientation(Orientation.SOUTH);
-                    outport1.setOrientation(Orientation.NORTH);
+                    orientation1 = Orientation.SOUTH;
                 } else if (y1 == y0 && x1 > x0) { // segment: east
-                    inport.setOrientation(Orientation.WEST);
-                    outport1.setOrientation(Orientation.EAST);
+                    orientation1 = Orientation.WEST;
                 } else if (y1 == y0 && x1 < x0) { // segment: west
-                    inport.setOrientation(Orientation.EAST);
-                    outport1.setOrientation(Orientation.WEST);
-                }
-                // if the point is in the next turning point,
-                if (x == x1 && y == y1 && i+1 != num1) {
-                    mxPoint p2 = list1.get(i+1);
-                    double x2 = p2.getX();
-                    double y2 = p2.getY();
-                    if (x == x2 && y < y2) { // segment: south
-                        outport1.setOrientation(Orientation.SOUTH);
-                    } else if (x == x2 && y > y2) { // segment: north
-                        outport1.setOrientation(Orientation.NORTH);
-                    } else if (y == y2 && x < x2) { // segment: east
-                        outport1.setOrientation(Orientation.EAST);
-                    } else if (y == y2 && x > x2) { // segment: west
-                        outport1.setOrientation(Orientation.WEST);
-                    }
+                    orientation1 = Orientation.EAST;
                 }
                 break;
             }
-        }
-        int num2 = list2.size();
-        if (num2 <= 1) {
-            return;
         }
         for (int i = 1; i < num2; i++) {
             mxPoint p0 = list2.get(i - 1);
@@ -273,33 +289,77 @@ public abstract class BlockAutoPositionUtils {
             double y1 = p1.getY();
             // if the point is in this segment,
             if (XcosRouteUtils.pointInLineSegment(x, y, x0, y0, x1, y1)) {
+                turning2 = i;
                 if (x1 == x0 && y1 > y0) { // segment: south
-                    outport2.setOrientation(Orientation.SOUTH);
+                    orientation2 = Orientation.NORTH;
                 } else if (x1 == x0 && y1 < y0) { // segment: north
-                    outport2.setOrientation(Orientation.NORTH);
+                    orientation2 = Orientation.SOUTH;
                 } else if (y1 == y0 && x1 > x0) { // segment: east
-                    outport2.setOrientation(Orientation.EAST);
+                    orientation2 = Orientation.WEST;
                 } else if (y1 == y0 && x1 < x0) { // segment: west
-                    outport2.setOrientation(Orientation.WEST);
-                }
-                // if the point is in the next turning point,
-                if (x == x1 && y == y1 && i+1 != num2) {
-                    mxPoint p2 = list2.get(i+1);
-                    double x2 = p2.getX();
-                    double y2 = p2.getY();
-                    if (x == x2 && y < y2) { // segment: south
-                        outport2.setOrientation(Orientation.SOUTH);
-                    } else if (x == x2 && y > y2) { // segment: north
-                        outport2.setOrientation(Orientation.NORTH);
-                    } else if (y == y2 && x < x2) { // segment: east
-                        outport2.setOrientation(Orientation.EAST);
-                    } else if (y == y2 && x > x2) { // segment: west
-                        outport2.setOrientation(Orientation.WEST);
-                    }
+                    orientation2 = Orientation.EAST;
                 }
                 break;
             }
         }
+        if (turning1 <= turning2) { // if list1 is better
+            return orientation1;
+        } else { // if list2 is better
+            return orientation2;
+        }
+    }
+
+    /**
+     * Get the orientation for the one Output Port of a Split Block according to its optimal route.
+     *
+     * @param list the second optimal route including the start Port and the end Port
+     * @param splitPoint the new position for the Split Block
+     * @return
+     */
+    private static Orientation getOutportOrientation(List<mxPoint> list, mxPoint splitPoint) {
+        double x = splitPoint.getX();
+        double y = splitPoint.getY();
+        int num = list.size();
+        if (num <= 1) {
+            return null;
+        }
+        for (int i = 1; i < num; i++) {
+            mxPoint p0 = list.get(i - 1);
+            mxPoint p1 = list.get(i);
+            double x0 = p0.getX();
+            double y0 = p0.getY();
+            double x1 = p1.getX();
+            double y1 = p1.getY();
+            // if the point is in this segment,
+            if (XcosRouteUtils.pointInLineSegment(x, y, x0, y0, x1, y1)) {
+                // if the point is in the next turning point,
+                if (x == x1 && y == y1 && i + 1 != num) {
+                    mxPoint p2 = list.get(i + 1);
+                    double x2 = p2.getX();
+                    double y2 = p2.getY();
+                    if (x == x2 && y < y2) { // segment: south
+                        return Orientation.SOUTH;
+                    } else if (x == x2 && y > y2) { // segment: north
+                        return Orientation.NORTH;
+                    } else if (y == y2 && x < x2) { // segment: east
+                        return Orientation.EAST;
+                    } else if (y == y2 && x > x2) { // segment: west
+                        return Orientation.WEST;
+                    }
+                }
+                if (x1 == x0 && y1 > y0) { // segment: south
+                    return Orientation.SOUTH;
+                } else if (x1 == x0 && y1 < y0) { // segment: north
+                    return Orientation.NORTH;
+                } else if (y1 == y0 && x1 > x0) { // segment: east
+                    return Orientation.EAST;
+                } else if (y1 == y0 && x1 < x0) { // segment: west
+                    return Orientation.WEST;
+                }
+                break;
+            }
+        }
+        return null;
     }
 
     /**
