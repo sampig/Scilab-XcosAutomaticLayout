@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.block.SplitBlock;
 import org.scilab.modules.xcos.link.BasicLink;
@@ -162,14 +161,34 @@ public abstract class XcosRouteUtils {
      * @return <b>true</b> if there is at least one blocks in the line.
      */
     protected static boolean checkObstacle(double x1, double y1, double x2, double y2, Object[] allCells) {
+        return checkObstacle(x1, y1, x2, y2, allCells, false);
+    }
+
+    /**
+     * Check whether there are blocks between two points.
+     *
+     * @param x1
+     *            the x-coordinate of the first point of the line
+     * @param y1
+     *            the y-coordinate of the first point of the line
+     * @param x2
+     *            the x-coordinate of the second point of the line
+     * @param y2
+     *            the y-coordinate of the second point of the line
+     * @param allCells
+     * @param isStrict
+     *            if it is true, there won't be intersection.
+     * @return <b>true</b> if there is at least one obstacle in the line.
+     */
+    protected static boolean checkObstacle(double x1, double y1, double x2, double y2, Object[] allCells, boolean isStrict) {
         for (Object o : allCells) {
             if (o instanceof mxCell) {
                 mxCell c = (mxCell) o;
                 if (c instanceof BasicLink) {
                     BasicLink l = (BasicLink) c;
-                    if (checkLinesIntersection(x1, y1, x2, y2, l)) {
+                    if (checkLinesIntersection(x1, y1, x2, y2, l) && isStrict) {
                         // check intersection.
-                        // return true;
+                        return true;
                     }
                     if (checkLinesCoincide(x1, y1, x2, y2, l)) {
                         // check superimposition.
@@ -315,9 +334,15 @@ public abstract class XcosRouteUtils {
             // if the edge is straight or vertical or horizontal style, there is
             // no way to check.
         } else {
-            listPoints.add(getLinkPortPosition(link, true));
+            if (getLinkPortPosition(link, true) != null) {
+                listPoints.add(getLinkPortPosition(link, true));
+            }
             listPoints.addAll(link.getGeometry().getPoints());
-            listPoints.add(getLinkPortPosition(link, false));
+            if (getLinkPortPosition(link, false) != null) {
+                listPoints.add(getLinkPortPosition(link, false));
+            }
+            // in Java 8:
+            // listPoints.removeIf(Objects::isNull);
             for (int i = 1; i < listPoints.size(); i++) {
                 mxPoint point3 = listPoints.get(i - 1);
                 mxPoint point4 = listPoints.get(i);

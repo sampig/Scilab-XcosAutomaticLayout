@@ -25,6 +25,7 @@ import org.scilab.modules.xcos.port.Orientation;
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxPoint;
 
 /**
@@ -56,13 +57,14 @@ public abstract class BlockAutoPositionUtils {
      * @param graph
      */
     protected static void changeSplitBlockPosition(SplitBlock splitblock, Object[] all, XcosDiagram graph) {
+        adjustSplitBlock(splitblock);
         BasicPort out1 = splitblock.getOut1();
         BasicPort out2 = splitblock.getOut2();
         mxICell sourceCell = getSplitSource(splitblock);
         mxICell targetCell1 = getSplitTarget(splitblock, out1);
         mxICell targetCell2 = getSplitTarget(splitblock, out2);
-        List<mxPoint> list1 = getRoute(sourceCell, targetCell1, all, graph);
-        List<mxPoint> list2 = getRoute(sourceCell, targetCell2, all, graph);
+        List<mxPoint> list1 = getRoute(splitblock, sourceCell, targetCell1, all, graph);
+        List<mxPoint> list2 = getRoute(splitblock, sourceCell, targetCell2, all, graph);
         mxPoint point = getSplitPoint(list1, list2);
         updatePortOrientation(splitblock, list1, list2, point);
         mxGeometry splitGeo = (mxGeometry) graph.getModel().getGeometry(splitblock).clone();
@@ -105,6 +107,59 @@ public abstract class BlockAutoPositionUtils {
     }
 
     /**
+     * Adjust the Blocks aligned linked to the split block. Only let SplitBlock
+     * aligned to normal Block.
+     *
+     * @param splitblock
+     */
+    private static void adjustSplitBlock(SplitBlock splitblock) {
+        BasicPort out1 = splitblock.getOut1();
+        BasicPort out2 = splitblock.getOut2();
+        mxICell sourceCell = getSplitSource(splitblock);
+        mxICell targetCell1 = getSplitTarget(splitblock, out1);
+        mxICell targetCell2 = getSplitTarget(splitblock, out2);
+        if (sourceCell.getParent() instanceof SplitBlock) {
+            // if it is a Split Block
+            if (!(targetCell1.getParent() instanceof SplitBlock)) {
+                adjustCell(sourceCell, targetCell1);
+            }
+            if (!(targetCell2.getParent() instanceof SplitBlock)) {
+                adjustCell(sourceCell, targetCell2);
+            }
+        }
+        if (targetCell1 instanceof SplitBlock) {
+            if (!(sourceCell.getParent() instanceof SplitBlock)) {
+                adjustCell(targetCell1, sourceCell);
+            }
+        }
+        if (targetCell2 instanceof SplitBlock) {
+            if (!(sourceCell.getParent() instanceof SplitBlock)) {
+                adjustCell(targetCell2, sourceCell);
+            }
+        }
+    }
+
+    /**
+     * Adjust the cell position align to the base one only if their difference are less than
+     * XcosRouteUtils.ALIGN_STRICT_ERROR.
+     *
+     * @param cell
+     * @param cellBase
+     */
+    private static void adjustCell(mxICell cell, mxICell cellBase) {
+        double error = XcosRouteUtils.ALIGN_STRICT_ERROR;
+        mxPoint cellPoint = getPortPosition(cell);
+        mxGeometry cellGeo = cell.getParent().getGeometry();
+        mxPoint cellBasePoint = getPortPosition(cellBase);
+        if (Math.abs(cellPoint.getX() - cellBasePoint.getX()) <= error) {
+            cellGeo.setX(cellBasePoint.getX() - cellGeo.getWidth() / 2);
+        }
+        if (Math.abs(cellPoint.getY() - cellBasePoint.getY()) <= error) {
+            cellGeo.setY(cellBasePoint.getY() - cellGeo.getHeight() / 2);
+        }
+    }
+
+    /**
      * Get the route for the source and the target ignoring the SplitBlock.
      *
      * @param source
@@ -113,17 +168,22 @@ public abstract class BlockAutoPositionUtils {
      * @param graph
      * @return all the turning points in the route including the start and end points
      */
-    private static List<mxPoint> getRoute(mxICell source, mxICell target, Object[] all, XcosDiagram graph) {
+    private static List<mxPoint> getRoute(SplitBlock splitblock, mxICell source, mxICell target, Object[] all, XcosDiagram graph) {
         XcosRoute util = new XcosRoute();
-        Object[] allOtherCells = util.getAllOtherCells(all, source, target, source.getEdgeAt(0),
-                target.getEdgeAt(0));
+        // get all obstacles, excluding splitblock itself or its relative link.
+        mxICell link1 = splitblock.getIn().getEdgeAt(0);
+        mxICell link2 = splitblock.getOut1().getEdgeAt(0);
+        mxICell link3 = splitblock.getOut2().getEdgeAt(0);
+        Object[] allOtherCells = util.getAllOtherCells(all, source, target, source.getEdgeAt(0), target.getEdgeAt(0), link1, link2, link3);
         List<mxPoint> list = new ArrayList<mxPoint>(0);
         if (source != null) {
             list.add(getPortPosition(source));
         }
         boolean flag = util.computeRoute(source, target, allOtherCells, graph);
         if (flag) {
-            list.addAll(util.getNonRedundantPoints());
+            for (mxPoint point : util.getNonRedundantPoints()) {
+                list.add(new mxPoint(Math.round(point.getX()), Math.round(point.getY())));
+            }
         }
         if (target != null) {
             list.add(getPortPosition(target));
@@ -165,6 +225,8 @@ public abstract class BlockAutoPositionUtils {
             point.setX(blockX + portX + portW / 2);
             point.setY(blockY + portY + portH / 2);
         }
+        point.setX(Math.round(point.getX()));
+        point.setY(Math.round(point.getY()));
         return point;
     }
 
@@ -371,16 +433,17 @@ public abstract class BlockAutoPositionUtils {
      */
     private static void updateSplitLink(SplitBlock split, Object[] all, XcosDiagram graph) {
         XcosRoute route = new XcosRoute();
-        BasicLink link = (BasicLink) split.getIn().getEdgeAt(0);
+        BasicLink linkIn = (BasicLink) split.getIn().getEdgeAt(0);
+        BasicLink linkOut1 = (BasicLink) split.getOut1().getEdgeAt(0);
+        BasicLink linkOut2 = (BasicLink) split.getOut2().getEdgeAt(0);
         boolean lockPort = true;
-        reset(graph, link);
-        route.updateRoute(link, all, graph, lockPort);
-        link = (BasicLink) split.getOut1().getEdgeAt(0);
-        reset(graph, link);
-        route.updateRoute(link, all, graph, lockPort);
-        link = (BasicLink) split.getOut2().getEdgeAt(0);
-        reset(graph, link);
-        route.updateRoute(link, all, graph, lockPort);
+        reset(graph, linkIn);
+        reset(graph, linkOut1);
+        reset(graph, linkOut2);
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", new BasicLink[] {linkIn, linkOut1, linkOut2});
+        route.updateRoute(linkIn, all, graph, lockPort);
+        route.updateRoute(linkOut1, all, graph, lockPort);
+        route.updateRoute(linkOut2, all, graph, lockPort);
     }
 
     /**
