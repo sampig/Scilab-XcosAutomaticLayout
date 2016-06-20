@@ -40,6 +40,8 @@ public abstract class XcosRouteUtils {
      */
     public final static double ALIGN_STRICT_ERROR = 2;
 
+    public final static double ALIGN_SPLITBLOCK_ERROR = 10;
+
     /**
      * The distance for a point away to the port.
      */
@@ -501,11 +503,26 @@ public abstract class XcosRouteUtils {
      *            the x-coordinate of the point
      * @param y
      *            the y-coordinate of the point
-     * @param link
+     * @param link the link
      * @return <b>true</b> if one point is in the Link.
      */
     private static boolean pointInLink(double x, double y, BasicLink link) {
         List<mxPoint> listPoints = link.getPoints(0, false);
+        return pointInLink(x, y, listPoints);
+    }
+
+    /**
+     * Check whether a point is in the Link (a list of Point).
+     *
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param listPoints
+     *            the list of points in the link.
+     * @return <b>true</b> if one point is in the Link.
+     */
+    protected static boolean pointInLink(double x, double y, List<mxPoint> listPoints) {
         if (listPoints == null || listPoints.size() <= 1) {
         } else {
             for (int i = 1; i < listPoints.size(); i++) {
@@ -978,7 +995,7 @@ public abstract class XcosRouteUtils {
     }
 
     /**
-     * Get the position of the source/target of a link. If dest is true, return source's position.
+     * Get the position of the source/target of a link.If dest is true, return source's position.
      * If dest is false, return target's position.
      *
      * @param link
@@ -1020,6 +1037,60 @@ public abstract class XcosRouteUtils {
             point.setY(blockY + portY + portH / 2);
         }
         return point;
+    }
+
+    /**
+     * Check if two points are coincident.
+     *
+     * @param x1
+     * @param y1
+     * @param x2
+     * @param y2
+     * @param isSplitBlock
+     * @return
+     */
+    protected static boolean isPointCoincident(double x1, double y1, double x2, double y2, boolean isSplitBlock) {
+        double error = XcosRouteUtils.ALIGN_STRICT_ERROR;
+        if (isSplitBlock) {
+            error = XcosRouteUtils.ALIGN_SPLITBLOCK_ERROR;
+        }
+        if (Math.abs(y1 - y2) <= error && Math.abs(x1 - x2) <= error) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if two port are parallel.
+     *
+     * @param orientation1
+     * @param orientation2
+     * @return
+     */
+    protected static boolean isOrientationParallel(double x1, double y1, double x2, double y2, Orientation orientation1, Orientation orientation2) {
+        if (orientation1 == orientation2) {
+            return true;
+        }
+        double error = XcosRouteUtils.ALIGN_STRICT_ERROR;
+        if (Math.abs(y1 - y2) > error) {
+            // if they are not aligned horizontally,
+            if (orientation1 == Orientation.EAST && orientation2 == Orientation.WEST) {
+                return true;
+            }
+            if (orientation1 == Orientation.WEST && orientation2 == Orientation.EAST) {
+                return true;
+            }
+        }
+        if (Math.abs(x1 - x2) > error) {
+            // if they are not aligned vertically,
+            if (orientation1 == Orientation.SOUTH && orientation2 == Orientation.NORTH) {
+                return true;
+            }
+            if (orientation1 == Orientation.NORTH && orientation2 == Orientation.SOUTH) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

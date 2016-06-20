@@ -42,6 +42,10 @@ public class XcosRoute {
     // if it is true, the position of the port will not be changed.
     private boolean lockPortPosition = false;
 
+    public  List<mxPoint> getList() {
+        return listRoute;
+    }
+
     /**
      * Update the Edge.
      *
@@ -75,7 +79,7 @@ public class XcosRoute {
                 geometry.setPoints(list);
                 ((mxGraphModel) (graph.getModel())).setGeometry(link, geometry);
                 listRoute.clear();
-            } else {
+            } else if (!lockPort) {
                 // if it cannot get the route, keep the same or change it to
                 // straight or give a pop windows to inform user.
                 ScilabModalDialog.show(XcosTab.get(graph),
@@ -89,8 +93,8 @@ public class XcosRoute {
      * Get the turning points for the optimal route. If the straight route is the optimal route,
      * return null.
      *
-     * @param sourceCell
-     * @param targetCell
+     * @param sourceCell the source port
+     * @param targetCell the target port
      * @param allCells
      * @return list of turning points
      */
@@ -138,10 +142,15 @@ public class XcosRoute {
             tgtx = targetCell.getParent().getGeometry().getCenterX();
             tgty = targetCell.getParent().getGeometry().getCenterY();
         }
-        // if two ports are aligned and there are no blocks between them,
-        // use straight route.
-        if ((XcosRouteUtils.isStrictlyAligned(srcx, srcy, tgtx, tgty))
-                && !XcosRouteUtils.checkObstacle(srcx, srcy, tgtx, tgty, allCells)) {
+        // if two points are coincident, use straignt route.
+        boolean isSplitBlock = (sourceCell.getParent() instanceof SplitBlock) && (targetCell.getParent() instanceof SplitBlock);
+        if (XcosRouteUtils.isPointCoincident(srcx, srcy, tgtx, tgty, isSplitBlock)) {
+            return true;
+        }
+        // if two ports are aligned and there are no blocks between them, use straight route.
+        if (XcosRouteUtils.isStrictlyAligned(srcx, srcy, tgtx, tgty)
+                && !XcosRouteUtils.checkObstacle(srcx, srcy, tgtx, tgty, allCells)
+                && !XcosRouteUtils.isOrientationParallel(srcx, srcy, tgtx, tgty, sourcePortOrien, targetPortOrien)) {
             return true;
         }
         // re-calculate the orientation for the SplitBlock.
@@ -161,6 +170,9 @@ public class XcosRoute {
         }
         sourcePoint = getPointAwayPort(sourceCell, srcx, srcy, sourcePortOrien, allCells, graph);
         targetPoint = getPointAwayPort(targetCell, tgtx, tgty, targetPortOrien, allCells, graph);
+        allCells = Arrays.copyOf(allCells, allCells.length + 2);
+        allCells[allCells.length - 2] = sourceCell;
+        allCells[allCells.length - 1] = targetCell;
         List<mxPoint> list = XcosRouteUtils.getSimpleRoute(sourcePoint, sourcePortOrien, targetPoint,
                 targetPortOrien, allCells);
         if (list != null && list.size() > 0) {
@@ -190,8 +202,7 @@ public class XcosRoute {
                 mxPoint p1 = list.get(list.size() - 1);
                 mxPoint p2 = listRoute.get(i);
                 mxPoint p3 = listRoute.get(i + 1);
-                if (XcosRouteUtils.pointInLineSegment(p2.getX(), p2.getY(), p1.getX(), p1.getY(), p3.getX(),
-                        p3.getY())) {
+                if (XcosRouteUtils.pointInLineSegment(p2.getX(), p2.getY(), p1.getX(), p1.getY(), p3.getX(), p3.getY())) {
                     // if p2 is in the line segment between p1 and p3, remove it.
                     continue;
                 } else {
@@ -227,32 +238,32 @@ public class XcosRoute {
         case EAST:
             point.setX(point.getX() + distance);
             while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
-                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setX(point.getX() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case SOUTH:
             point.setY(point.getY() + distance);
             while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
-                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setY(point.getY() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case WEST:
             point.setX(point.getX() - distance);
             while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
-                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setX(point.getX() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;
         case NORTH:
             point.setY(point.getY() - distance);
             while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells) || XcosRouteUtils
-                            .checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
                 point.setY(point.getY() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
             }
             break;

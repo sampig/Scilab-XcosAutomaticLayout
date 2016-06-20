@@ -312,10 +312,11 @@ public final class XcosMessages {
 
     /* Automatic Layout */
     public static final String LINK_STYLE_OPTIMAL = Messages.gettext("Optimal");
-    public static final String BLOCK_AUTO_POSITION = Messages.gettext("Block Auto Position");
-    public static final String BLOCK_AUTO_POSITION_SPLIT_BLOCK = Messages.gettext("BAP - Split Block");
-    public static final String BLOCK_AUTO_POSITION_SPLIT_BLOCK_SHORT = Messages.gettext("Split Block Auto Position");
+    public static final String BLOCK_AUTO_POSITION = Messages.gettext("Auto-Position Block");
+    public static final String BLOCK_AUTO_POSITION_SPLIT_BLOCK = Messages.gettext("Split Block");
+    public static final String BLOCK_AUTO_POSITION_SPLIT_BLOCK_CONTEXTUAL = Messages.gettext("Auto-Position Split Block");
     public static final String OLS_ROUTE_NOT_FOUND = Messages.gettext("Optimal route cannot be found.");
+    public static final String BASP_POSITION_NOT_FOUND = Messages.gettext("Auto-Position for Split Block cannot be found.");
 
     // CSON: JavadocVariable
     // CSON: LineLength
