@@ -76,14 +76,37 @@ The diagram after using OLS:
 
 ### II-Functionality
 
-- [ ] Block Automatic Position - Split Blocks
+- [x] Block Automatic Position - Split Blocks (BAP - SBAP)
 - [ ] Block Automatic Position - Basic Blocks
 - [ ] Automatic Layout Preview
 
 ### II-Task
 
+Relative files:
+
+| Package  | Class | Description |
+| -------------- | ------------------ | ------------- |
+| ~.link.actions | AutoPositionSplitBlockAction | Action events |
+| ~.utils  | BlockAutoPositionUtils  | Compute position |
 
 ### II-Result
 
+#### Block Automatic Position - Split Blocks
+
+Diagram-A in original version:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP01.png?raw=true)
+
+Diagram-A after using SBAP:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP02.png?raw=true)
+
+Diagram-B in original version:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP11.png?raw=true)
+
+Diagram-B after using SBAP:
+
+![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP12.png?raw=true)
 
 
