@@ -381,8 +381,7 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point of the second line
      * @return <b>true</b> if two lines coincide.
      */
-    private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
-            double x4, double y4) {
+    private static boolean linesCoincide(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4) {
         x1 = Math.round(x1);
         y1 = Math.round(y1);
         x2 = Math.round(x2);
@@ -433,8 +432,7 @@ public abstract class XcosRouteUtils {
      *            the y-coordinate of the second point of the second line
      * @return <b>true</b> if two lines coincide.
      */
-    private static boolean linesStrictlyCoincide(double x1, double y1, double x2, double y2, double x3, double y3,
-            double x4, double y4) {
+    private static boolean linesStrictlyCoincide(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4) {
         // the first line is inside the second line.
         if (pointInLineSegment(x1, y1, x3, y3, x4, y4) && pointInLineSegment(x2, y2, x3, y3, x4, y4)) {
             return true;
@@ -1054,7 +1052,8 @@ public abstract class XcosRouteUtils {
         if (isSplitBlock) {
             error = XcosRouteUtils.ALIGN_SPLITBLOCK_ERROR;
         }
-        if (Math.abs(y1 - y2) <= error && Math.abs(x1 - x2) <= error) {
+        if (Math.abs(y1 - y2) <= error && Math.abs(x1 - x2) <= error
+                && (Math.abs(y1 - y2) + Math.abs(x1 - x2)) < error * 2) {
             return true;
         }
         return false;
@@ -1087,6 +1086,42 @@ public abstract class XcosRouteUtils {
                 return true;
             }
             if (orientation1 == Orientation.NORTH && orientation2 == Orientation.SOUTH) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if two lines are parallel.
+     *
+     * @param x1
+     *            the x-coordinate of the first point of the first line
+     * @param y1
+     *            the y-coordinate of the first point of the first line
+     * @param x2
+     *            the x-coordinate of the second point of the first line
+     * @param y2
+     *            the y-coordinate of the second point of the first line
+     * @param x3
+     *            the x-coordinate of the first point of the second line
+     * @param y3
+     *            the y-coordinate of the first point of the second line
+     * @param x4
+     *            the x-coordinate of the second point of the second line
+     * @param y4
+     *            the y-coordinate of the second point of the second line
+     * @param includeCoincide
+     *            true if including coincide situation
+     * @return <b>true</b> if two lines are parallel.
+     */
+    protected static boolean isLineParallel(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4, boolean includeCoincide) {
+        double i = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        // two lines are parallel and not coincide.
+        if (i == 0) {
+            if (includeCoincide || (!pointInLineSegment(x1, y1, x3, y3, x4, y4)
+                    && !pointInLineSegment(x2, y2, x3, y3, x4, y4) && !pointInLineSegment(x3, y3, x1, y1, x2, y2)
+                    && !pointInLineSegment(x4, y4, x1, y1, x2, y2))) {
                 return true;
             }
         }
