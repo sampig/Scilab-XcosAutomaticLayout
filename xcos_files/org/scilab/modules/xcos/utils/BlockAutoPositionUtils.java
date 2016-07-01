@@ -42,6 +42,7 @@ public abstract class BlockAutoPositionUtils {
      *
      * @param graph
      * @param cells
+     *            all selected cells
      */
     public static void changeSplitBlocksPosition(XcosDiagram graph, Object[] cells) {
         Object[] all = graph.getChildCells(graph.getDefaultParent());
@@ -70,7 +71,7 @@ public abstract class BlockAutoPositionUtils {
         for (Object o : cells) {
             if (o instanceof SplitBlock) {
                 SplitBlock cell = getRootSplitBlock((SplitBlock) o);
-                if (!list.contains(cell)) {
+                if (!list.contains(cell) && !isListContainsCell(list, cell)) {
                     list.add(cell);
                 }
             }
@@ -85,13 +86,33 @@ public abstract class BlockAutoPositionUtils {
      * @return the first Split Block
      */
     private static SplitBlock getRootSplitBlock(SplitBlock splitblock) {
-        mxICell port = getSplitSourcePort(splitblock);
+        mxICell port = getSplitInLinkPort(splitblock);
         while ((port != null) && (port.getParent() instanceof SplitBlock)) {
-            port = getSplitSourcePort(((SplitBlock) port.getParent()));
+            port = getSplitInLinkPort(((SplitBlock) port.getParent()));
         }
         mxICell edge = port.getEdgeAt(0);
         mxICell cell = ((mxCell) edge).getTarget();
         return ((SplitBlock) cell.getParent());
+    }
+
+    /**
+     * Check whether the list contains one split block in the link where the SplitBlock is.
+     *
+     * @param list
+     * @param o
+     * @return
+     */
+    private static boolean isListContainsCell(List<Object> list, SplitBlock object) {
+        for (Object o : list) {
+            if (o instanceof SplitBlock) {
+                SplitBlock split = (SplitBlock) o;
+                List<mxICell> listSplit = getAllChildrenSplitBlockByLevel(split);
+                if (listSplit.contains(object)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -102,29 +123,8 @@ public abstract class BlockAutoPositionUtils {
      */
     private static int getSplitBlockNumber(SplitBlock splitblock) {
         SplitBlock root = getRootSplitBlock(splitblock);
-        return getSelfAndChildrenNumber(root);
-    }
-
-    /**
-     * Get the number of split block including itself and its all children.
-     *
-     * @param splitblock
-     * @return the number of split block
-     */
-    private static int getSelfAndChildrenNumber(SplitBlock splitblock) {
-        int num1 = 0;
-        int num2 = 0;
-        BasicPort out1 = splitblock.getOut1();
-        BasicPort out2 = splitblock.getOut2();
-        mxICell targetPort1 = getSplitTargetPort(splitblock, out1);
-        if (targetPort1.getParent() instanceof SplitBlock) {
-            num1 = getSelfAndChildrenNumber((SplitBlock) targetPort1.getParent());
-        }
-        mxICell targetPort2 = getSplitTargetPort(splitblock, out2);
-        if (targetPort2.getParent() instanceof SplitBlock) {
-            num2 = getSelfAndChildrenNumber((SplitBlock) targetPort2.getParent());
-        }
-        return 1 + num1 + num2;
+        List<mxICell> list = getAllChildrenSplitBlockByLevel(root);
+        return list.size() + 1;
     }
 
     /**
@@ -137,13 +137,17 @@ public abstract class BlockAutoPositionUtils {
     protected static void changeSplitBlockPosition(SplitBlock splitblock, Object[] all, XcosDiagram graph) {
         BasicPort out1 = splitblock.getOut1();
         BasicPort out2 = splitblock.getOut2();
-        mxICell sourcePort = getSplitSourcePort(splitblock);
-        mxICell targetPort1 = getSplitTargetPort(splitblock, out1);
-        mxICell targetPort2 = getSplitTargetPort(splitblock, out2);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
+        mxICell targetPort1 = getSplitLinkPort(splitblock, out1);
+        mxICell targetPort2 = getSplitLinkPort(splitblock, out2);
         Object[] allObstacles = getObstacles(splitblock, all);
         List<mxPoint> list1 = getRoute(splitblock, sourcePort, targetPort1, allObstacles, graph);
         List<mxPoint> list2 = getRoute(splitblock, sourcePort, targetPort2, allObstacles, graph);
-        adjustRoutes(list1, list2, allObstacles);
+        List<mxICell> listPorts = new ArrayList<>(0);
+        listPorts.add(sourcePort);
+        listPorts.add(targetPort1);
+        listPorts.add(targetPort2);
+        adjustRoutes(list1, list2, allObstacles, listPorts);
         mxPoint point = getSplitPoint(list1, list2);
         if (point == null) {
             ScilabModalDialog.show(XcosTab.get(graph), new String[] { XcosMessages.BASP_POSITION_NOT_FOUND },
@@ -167,7 +171,7 @@ public abstract class BlockAutoPositionUtils {
      */
     protected static void changeSplitBlockPositionMulti(SplitBlock splitblock, Object[] all, XcosDiagram graph) {
         adjustSplitBlock(splitblock);
-        mxICell sourcePort = getSplitSourcePort(splitblock);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
         List<mxICell> listTargetPorts = getSplitAllTargetPort(splitblock);
         List<mxICell> listSplitBlocks = new ArrayList<>(0);
         listSplitBlocks.add(splitblock);
@@ -187,6 +191,10 @@ public abstract class BlockAutoPositionUtils {
                 for (mxPoint point : util.getNonRedundantPoints()) {
                     list.add(new mxPoint(Math.round(point.getX()), Math.round(point.getY())));
                 }
+            } else {
+                ScilabModalDialog.show(XcosTab.get(graph), new String[] { XcosMessages.BASP_POSITION_NOT_FOUND },
+                        XcosMessages.BLOCK_AUTO_POSITION_SPLIT_BLOCK, IconType.INFORMATION_ICON);
+                return;
             }
             if (targetPort != null) {
                 list.add(getPortPosition(targetPort));
@@ -194,11 +202,27 @@ public abstract class BlockAutoPositionUtils {
             mapRoutes.put(targetPort, list);
             listRoutes.add(list);
         }
-        adjustRoutes(listRoutes, allObstacles);
+        List<mxICell> listPorts = new ArrayList<>(0);
+        listPorts.add(sourcePort);
+        listPorts.addAll(listTargetPorts);
+        adjustRoutes(listRoutes, allObstacles, listPorts);
         // set the new position for each Split Block
-        for (mxICell cell : listSplitBlocks) {
+        for (int i = 0; i < listSplitBlocks.size(); i++) {
+            mxICell cell = listSplitBlocks.get(i);
             SplitBlock split = (SplitBlock) cell;
-            List<mxICell> listTargets = getSplitAllTargetPort(split);
+            List<mxICell> listTargets = null;
+            if (i == 0) {
+                listTargets = getSplitAllTargetPort(split);
+            } else {
+                for (int j = 0; j < i; j++) {
+                    SplitBlock temp = (SplitBlock) listSplitBlocks.get(j);
+                    // get its previous split block.
+                    if (isSplitBlocksConnected(split, temp) != null) {
+                        listTargets = getSplitAllTargetPort(split, temp);
+                        break;
+                    }
+                }
+            }
             List<List<mxPoint>> listTargetRoutes = new ArrayList<>(0);
             for (mxICell target : listTargets) {
                 listTargetRoutes.add(mapRoutes.get(target));
@@ -215,14 +239,29 @@ public abstract class BlockAutoPositionUtils {
             graph.getModel().setGeometry(split, splitGeo);
         }
         // update the orientation for each Split Block
-        for (mxICell cell : listSplitBlocks) {
+        for (int i = 0; i < listSplitBlocks.size(); i++) {
+            mxICell cell = listSplitBlocks.get(i);
             SplitBlock split = (SplitBlock) cell;
-            List<mxICell> listTargets = getSplitAllTargetPort(split);
+            List<mxICell> listTargets = null;
+            BasicPort inPort = null;
+            if (i == 0) {
+                listTargets = getSplitAllTargetPort(split);
+            } else {
+                for (int j = 0; j < i; j++) {
+                    SplitBlock temp = (SplitBlock) listSplitBlocks.get(j);
+                    // get its previous split block.
+                    if (isSplitBlocksConnected(split, temp) != null) {
+                        listTargets = getSplitAllTargetPort(split, temp);
+                        inPort = isSplitBlocksConnected(split, temp);
+                        break;
+                    }
+                }
+            }
             List<List<mxPoint>> listTargetRoutes = new ArrayList<>(0);
             for (mxICell target : listTargets) {
                 listTargetRoutes.add(mapRoutes.get(target));
             }
-            updatePortOrientation(split, listTargetRoutes, graph);
+            updatePortOrientation(split, listTargetRoutes, graph, inPort);
         }
         // update the relative links
         for (mxICell cell : listSplitBlocks) {
@@ -232,12 +271,12 @@ public abstract class BlockAutoPositionUtils {
     }
 
     /**
-     * Get the source Port of a SplitBlock.
+     * Get the linked Port of a SplitBlock according to its Input.
      *
      * @param splitblock
      * @return
      */
-    private static mxICell getSplitSourcePort(SplitBlock splitblock) {
+    private static mxICell getSplitInLinkPort(SplitBlock splitblock) {
         mxICell cell = null;
         BasicPort in = splitblock.getIn();
         mxICell edge = in.getEdgeAt(0);
@@ -251,22 +290,62 @@ public abstract class BlockAutoPositionUtils {
     }
 
     /**
-     * Get the target Port of a SplitBlock according to its Output.
+     * Get the linked Port of a SplitBlock according to its Port.
      *
      * @param splitblock
      * @param out
      * @return
      */
-    private static mxICell getSplitTargetPort(SplitBlock splitblock, BasicPort out) {
+    private static mxICell getSplitLinkPort(SplitBlock splitblock, BasicPort port) {
         mxICell cell = null;
-        mxICell edge = out.getEdgeAt(0);
+        mxICell edge = port.getEdgeAt(0);
         if (edge != null && edge instanceof mxCell) {
             cell = ((mxCell) edge).getTarget();
-            if (cell == out) {
+            if (cell == port) {
                 cell = ((mxCell) edge).getSource();
             }
         }
         return cell;
+    }
+    
+    /**
+     * Check whether two split blocks are connected.
+     * 
+     * @param split1
+     * @param split2
+     * @return the connected port of split1
+     */
+    private static BasicPort isSplitBlocksConnected(SplitBlock split1, SplitBlock split2) {
+        BasicPort in1 = split1.getIn();
+        BasicPort out11 = split1.getOut1();
+        BasicPort out12 = split1.getOut2();
+        BasicPort in2 = split2.getIn();
+        BasicPort out21 = split2.getOut1();
+        BasicPort out22 = split2.getOut2();
+        if ((in1.getEdgeAt(0) == in2.getEdgeAt(0))
+                || (in1.getEdgeAt(0) == out21.getEdgeAt(0))
+                || (in1.getEdgeAt(0) == out22.getEdgeAt(0))) {
+            return in1;
+        } else if ((out11.getEdgeAt(0) == in2.getEdgeAt(0))
+                || (out11.getEdgeAt(0) == out21.getEdgeAt(0))
+                || (out11.getEdgeAt(0) == out22.getEdgeAt(0))) {
+            return out11;
+        } else if ((out12.getEdgeAt(0) == in2.getEdgeAt(0))
+                || (out12.getEdgeAt(0) == out21.getEdgeAt(0))
+                || (out12.getEdgeAt(0) == out22.getEdgeAt(0))) {
+            return out12;
+        }
+        return null;
+    }
+
+    /**
+     * See {@link #getSplitAllTargetPort(SplitBlock, SplitBlock)}.
+     * 
+     * @param splitblock
+     * @return
+     */
+    private static List<mxICell> getSplitAllTargetPort(SplitBlock splitblock) {
+        return getSplitAllTargetPort(splitblock, null);
     }
 
     /**
@@ -276,13 +355,17 @@ public abstract class BlockAutoPositionUtils {
      * @param splitblock
      * @return
      */
-    private static List<mxICell> getSplitAllTargetPort(SplitBlock splitblock) {
+    private static List<mxICell> getSplitAllTargetPort(SplitBlock splitblock, SplitBlock previous) {
         List<mxICell> list = new ArrayList<>(0);
         BasicPort out1 = splitblock.getOut1();
         BasicPort out2 = splitblock.getOut2();
-        mxICell targetPort1 = getSplitTargetPort(splitblock, out1);
-        mxICell targetPort2 = getSplitTargetPort(splitblock, out2);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
+        mxICell targetPort1 = getSplitLinkPort(splitblock, out1);
+        mxICell targetPort2 = getSplitLinkPort(splitblock, out2);
         // add normal block firstly
+        if (previous != null && !(sourcePort.getParent() instanceof SplitBlock)) {
+            list.add(sourcePort);
+        }
         if (!(targetPort1.getParent() instanceof SplitBlock)) {
             list.add(targetPort1);
         }
@@ -290,13 +373,26 @@ public abstract class BlockAutoPositionUtils {
             list.add(targetPort2);
         }
         // if it was split block, add their final target.
-        if (targetPort1.getParent() instanceof SplitBlock) {
-            list.addAll(getSplitAllTargetPort((SplitBlock) targetPort1.getParent()));
+        if (previous != null && sourcePort.getParent() instanceof SplitBlock && previous != sourcePort.getParent()) {
+            list.addAll(getSplitAllTargetPort((SplitBlock) sourcePort.getParent(), splitblock));
         }
-        if (targetPort2.getParent() instanceof SplitBlock) {
-            list.addAll(getSplitAllTargetPort((SplitBlock) targetPort2.getParent()));
+        if (targetPort1.getParent() instanceof SplitBlock && previous != targetPort1.getParent()) {
+            list.addAll(getSplitAllTargetPort((SplitBlock) targetPort1.getParent(), splitblock));
+        }
+        if (targetPort2.getParent() instanceof SplitBlock && previous != targetPort2.getParent()) {
+            list.addAll(getSplitAllTargetPort((SplitBlock) targetPort2.getParent(), splitblock));
         }
         return list;
+    }
+
+    /**
+     * See {@link #getAllChildrenSplitBlockByLevel(SplitBlock, List)}
+     *
+     * @param splitblock
+     * @return
+     */
+    private static List<mxICell> getAllChildrenSplitBlockByLevel(SplitBlock splitblock) {
+        return getAllChildrenSplitBlockByLevel(splitblock, null);
     }
 
     /**
@@ -304,29 +400,37 @@ public abstract class BlockAutoPositionUtils {
      * Add them in an order according to their level.
      *
      * @param splitblock
+     * @param list
      * @return
      */
-    private static List<mxICell> getAllChildrenSplitBlockByLevel(SplitBlock splitblock) {
-        List<mxICell> list = new ArrayList<>(0);
+    private static List<mxICell> getAllChildrenSplitBlockByLevel(SplitBlock splitblock, SplitBlock previous) {
+        List<mxICell> listCells = new ArrayList<>(0);
         BasicPort out1 = splitblock.getOut1();
         BasicPort out2 = splitblock.getOut2();
-        mxICell targetPort1 = getSplitTargetPort(splitblock, out1);
-        mxICell targetPort2 = getSplitTargetPort(splitblock, out2);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
+        mxICell targetPort1 = getSplitLinkPort(splitblock, out1);
+        mxICell targetPort2 = getSplitLinkPort(splitblock, out2);
         // add Split Blocks in this level.
-        if (targetPort1.getParent() instanceof SplitBlock) {
-            list.add(targetPort1.getParent());
+        if ((sourcePort.getParent() instanceof SplitBlock) && (previous != sourcePort.getParent())) {
+            listCells.add(sourcePort.getParent());
         }
-        if (targetPort2.getParent() instanceof SplitBlock) {
-            list.add(targetPort2.getParent());
+        if ((targetPort1.getParent() instanceof SplitBlock) && (previous != targetPort1.getParent())) {
+            listCells.add(targetPort1.getParent());
+        }
+        if ((targetPort2.getParent() instanceof SplitBlock) && (previous != targetPort2.getParent())) {
+            listCells.add(targetPort2.getParent());
         }
         // then add the children.
-        if (targetPort1.getParent() instanceof SplitBlock) {
-            list.addAll(getAllChildrenSplitBlockByLevel((SplitBlock) targetPort1.getParent()));
+        if ((sourcePort.getParent() instanceof SplitBlock) && (previous != sourcePort.getParent())) {
+            listCells.addAll(getAllChildrenSplitBlockByLevel((SplitBlock) sourcePort.getParent(), splitblock));
         }
-        if (targetPort2.getParent() instanceof SplitBlock) {
-            list.addAll(getAllChildrenSplitBlockByLevel((SplitBlock) targetPort2.getParent()));
+        if ((targetPort1.getParent() instanceof SplitBlock) && (previous != targetPort1.getParent())) {
+            listCells.addAll(getAllChildrenSplitBlockByLevel((SplitBlock) targetPort1.getParent(), splitblock));
         }
-        return list;
+        if ((targetPort2.getParent() instanceof SplitBlock) && (previous != targetPort2.getParent())) {
+            listCells.addAll(getAllChildrenSplitBlockByLevel((SplitBlock) targetPort2.getParent(), splitblock));
+        }
+        return listCells;
     }
 
     /**
@@ -338,15 +442,15 @@ public abstract class BlockAutoPositionUtils {
      */
     private static List<mxICell> getAllLinksOnSplitBlock(SplitBlock splitblock) {
         List<mxICell> listLinks = new ArrayList<>(0);
-        List<mxICell> listBlocks = new ArrayList<>(0);
-        listBlocks.add(splitblock);
-        listBlocks.addAll(getAllChildrenSplitBlockByLevel(splitblock));
-        mxICell link1 = splitblock.getIn().getEdgeAt(0);
-        if (!listLinks.contains(link1)) {
-            listLinks.add(link1);
-        }
-        for (mxICell block : listBlocks) {
+        List<mxICell> listSplitBlocks = new ArrayList<>(0);
+        listSplitBlocks.add(splitblock);
+        listSplitBlocks.addAll(getAllChildrenSplitBlockByLevel(splitblock));
+        for (mxICell block : listSplitBlocks) {
             SplitBlock split = (SplitBlock) block;
+            mxICell link1 = split.getIn().getEdgeAt(0);
+            if (!listLinks.contains(link1)) {
+                listLinks.add(link1);
+            }
             mxICell link2 = split.getOut1().getEdgeAt(0);
             mxICell link3 = split.getOut2().getEdgeAt(0);
             if (!listLinks.contains(link2)) {
@@ -368,9 +472,9 @@ public abstract class BlockAutoPositionUtils {
     private static void adjustSplitBlock(SplitBlock splitblock) {
         BasicPort out1 = splitblock.getOut1();
         BasicPort out2 = splitblock.getOut2();
-        mxICell sourcePort = getSplitSourcePort(splitblock);
-        mxICell targetPort1 = getSplitTargetPort(splitblock, out1);
-        mxICell targetPort2 = getSplitTargetPort(splitblock, out2);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
+        mxICell targetPort1 = getSplitLinkPort(splitblock, out1);
+        mxICell targetPort2 = getSplitLinkPort(splitblock, out2);
         if (sourcePort.getParent() instanceof SplitBlock) {
             // if it is a Split Block
             if (!(targetPort1.getParent() instanceof SplitBlock)) {
@@ -419,11 +523,11 @@ public abstract class BlockAutoPositionUtils {
      * @param list2
      * @param allObstacles
      */
-    private static void adjustRoutes(List<mxPoint> list1, List<mxPoint> list2, Object[] allObstacles) {
+    private static void adjustRoutes(List<mxPoint> list1, List<mxPoint> list2, Object[] allObstacles, List<mxICell> listPorts) {
         List<List<mxPoint>> listRoutes = new ArrayList<>(0);
         listRoutes.add(list1);
         listRoutes.add(list2);
-        adjustRoutes(listRoutes, allObstacles);
+        adjustRoutes(listRoutes, allObstacles, listPorts);
     }
 
     /**
@@ -432,7 +536,12 @@ public abstract class BlockAutoPositionUtils {
      * @param listRoutes
      * @param allObstacles
      */
-    private static void adjustRoutes(List<List<mxPoint>> listRoutes, Object[] allObstacles) {
+    private static void adjustRoutes(List<List<mxPoint>> listRoutes, Object[] allObstacles, List<mxICell> listPorts) {
+        List<mxGeometry> listGeo = new ArrayList<>(0);
+        for (mxICell port : listPorts) {
+            mxGeometry geometry = getPortGeometry(port);
+            listGeo.add(geometry);
+        }
         for (int i = 0; i < listRoutes.size() - 1; i++) {
             List<mxPoint> list1 = listRoutes.get(i);
             for (int j = i + 1; j < listRoutes.size(); j++) {
@@ -522,6 +631,20 @@ public abstract class BlockAutoPositionUtils {
                                     boolean flag1 = !XcosRouteUtils.checkObstacle(p10.getX(), p10.getY(), x21, y11, allObstacles)
                                             && !XcosRouteUtils.checkObstacle(x21, y11, x21, y12, allObstacles)
                                             && !XcosRouteUtils.checkObstacle(x21, y12, p13.getX(), p13.getY(), allObstacles);
+                                    for (mxGeometry geometry : listGeo) {
+                                        if (XcosRouteUtils.checkPointInGeometry(x11, y21, geometry)
+                                                || XcosRouteUtils.checkPointInGeometry(x11, y22, geometry)) {
+                                            flag2 = false;
+                                            break;
+                                        }
+                                    }
+                                    for (mxGeometry geometry : listGeo) {
+                                        if (XcosRouteUtils.checkPointInGeometry(x21, y11, geometry)
+                                                || XcosRouteUtils.checkPointInGeometry(x21, y12, geometry)) {
+                                            flag1 = false;
+                                            break;
+                                        }
+                                    }
                                     if (flag2) {
                                         p21.setX(x11);
                                         p22.setX(x11);
@@ -536,6 +659,20 @@ public abstract class BlockAutoPositionUtils {
                                     boolean flag1 = !XcosRouteUtils.checkObstacle(p10.getX(), p10.getY(), x11, y21, allObstacles)
                                             && !XcosRouteUtils.checkObstacle(x11, y21, x12, y21, allObstacles)
                                             && !XcosRouteUtils.checkObstacle(x12, y21, p13.getX(), p13.getY(), allObstacles);
+                                    for (mxGeometry geometry : listGeo) {
+                                        if (XcosRouteUtils.checkPointInGeometry(x21, y11, geometry)
+                                                || XcosRouteUtils.checkPointInGeometry(x22, y11, geometry)) {
+                                            flag2 = false;
+                                            break;
+                                        }
+                                    }
+                                    for (mxGeometry geometry : listGeo) {
+                                        if (XcosRouteUtils.checkPointInGeometry(x11, y21, geometry)
+                                                || XcosRouteUtils.checkPointInGeometry(x12, y21, geometry)) {
+                                            flag1 = false;
+                                            break;
+                                        }
+                                    }
                                     if (flag2) {
                                         p21.setY(y11);
                                         p22.setY(y11);
@@ -592,7 +729,7 @@ public abstract class BlockAutoPositionUtils {
      * @return
      */
     private static Object[] getObstacles(SplitBlock splitblock, Object[] all) {
-        mxICell sourcePort = getSplitSourcePort(splitblock);
+        mxICell sourcePort = getSplitInLinkPort(splitblock);
         List<mxICell> listTargetPorts = getSplitAllTargetPort(splitblock);
         List<mxICell> listSplitBlocks = new ArrayList<>(0);
         listSplitBlocks.add(splitblock);
@@ -607,6 +744,45 @@ public abstract class BlockAutoPositionUtils {
         XcosRoute util = new XcosRoute();
         Object[] allObstacles = util.getAllOtherCells(all, notObstacles);
         return allObstacles;
+    }
+
+    /**
+     * Get a port's geometry.
+     * 
+     * @param port
+     * @return
+     */
+    private static mxGeometry getPortGeometry(mxICell port) {
+        mxGeometry geometry = new mxGeometry();
+        if (port == null) {
+            return null;
+        }
+        if (port.getParent() instanceof SplitBlock) {
+            SplitBlock cell = (SplitBlock) port.getParent();
+            geometry.setX(cell.getGeometry().getX());
+            geometry.setY(cell.getGeometry().getY());
+            geometry.setWidth(cell.getGeometry().getWidth());
+            geometry.setHeight(cell.getGeometry().getHeight());
+        } else {
+            mxGeometry portGeo = port.getGeometry();
+            double portX = portGeo.getX();
+            double portY = portGeo.getY();
+            mxICell parent = port.getParent();
+            mxGeometry parentGeo = parent.getGeometry();
+            double blockX = parentGeo.getX();
+            double blockY = parentGeo.getY();
+            double blockW = parentGeo.getWidth();
+            double blockH = parentGeo.getHeight();
+            if (portGeo.isRelative()) {
+                portX *= blockW;
+                portY *= blockH;
+            }
+            geometry.setX(blockX + portX);
+            geometry.setY(blockY + portY);
+            geometry.setWidth(portGeo.getWidth());
+            geometry.setHeight(portGeo.getHeight());
+        }
+        return geometry;
     }
 
 
@@ -743,11 +919,11 @@ public abstract class BlockAutoPositionUtils {
         if (orientationIn != null) {
             inport.setOrientation(orientationIn);
         }
-        Orientation orientationOut1 = getOutportOrientation(list1, splitPoint);
+        Orientation orientationOut1 = getPortOrientation(list1, splitPoint);
         if (orientationOut1 != null) {
             outport1.setOrientation(orientationOut1);
         }
-        Orientation orientationOut2 = getOutportOrientation(list2, splitPoint);
+        Orientation orientationOut2 = getPortOrientation(list2, splitPoint);
         if (orientationOut2 != null) {
             outport2.setOrientation(orientationOut2);
         }
@@ -769,7 +945,7 @@ public abstract class BlockAutoPositionUtils {
         list.add(list1);
         list.add(list2);
         mxPoint startPoint = list1.get(0);
-        return getInportOrientation(list, startPoint, splitPoint);
+        return getInputOrientation(list, startPoint, splitPoint);
     }
 
     /**
@@ -783,7 +959,7 @@ public abstract class BlockAutoPositionUtils {
      *            the new position for the Split Block
      * @return
      */
-    private static Orientation getInportOrientation(List<List<mxPoint>> list, mxPoint startPoint, mxPoint splitPoint) {
+    private static Orientation getInputOrientation(List<List<mxPoint>> list, mxPoint startPoint, mxPoint splitPoint) {
         int[] turning = new int[list.size()];
         Orientation[] orientation = new Orientation[list.size()];
         double x = splitPoint.getX();
@@ -835,7 +1011,7 @@ public abstract class BlockAutoPositionUtils {
     }
 
     /**
-     * Get the orientation for the one Output Port of a Split Block according to
+     * Get the orientation for the one Port of a Split Block according to
      * its optimal route.
      *
      * @param list
@@ -844,7 +1020,7 @@ public abstract class BlockAutoPositionUtils {
      *            the new position for the Split Block
      * @return
      */
-    private static Orientation getOutportOrientation(List<mxPoint> list, mxPoint splitPoint) {
+    private static Orientation getPortOrientation(List<mxPoint> list, mxPoint splitPoint) {
         double x = splitPoint.getX();
         double y = splitPoint.getY();
         int num = list.size();
@@ -896,26 +1072,51 @@ public abstract class BlockAutoPositionUtils {
      * @param split
      * @param list
      * @param graph
+     * @param inPort
      */
-    private static void updatePortOrientation(SplitBlock split, List<List<mxPoint>> list, XcosDiagram graph) {
+    private static void updatePortOrientation(SplitBlock split, List<List<mxPoint>> list, XcosDiagram graph, BasicPort input) {
         mxGeometry splitGeo = graph.getModel().getGeometry(split);
         mxPoint splitPoint = new mxPoint(splitGeo.getCenterX(), splitGeo.getCenterY());
-        // get Input Port Orientation
-        mxICell source = getSplitSourcePort(split);
-        mxPoint startPoint = getPortPosition(source);
-        split.getIn().setOrientation(getInportOrientation(list, startPoint, splitPoint));
-        // get OutPut Port Orientation
+        BasicPort inport = split.getIn();
         BasicPort outport1 = split.getOut1();
         BasicPort outport2 = split.getOut2();
-        mxPoint out1Position = getPortPosition(getSplitTargetPort(split, outport1));
-        mxPoint out2Position = getPortPosition(getSplitTargetPort(split, outport2));
-        for (int p = 0; p < list.size(); p++) {
-            List<mxPoint> list1 = list.get(p);
-            if (XcosRouteUtils.pointInLink(out1Position.getX(), out1Position.getY(), list1)) {
-                outport1.setOrientation(getOutportOrientation(list1, splitPoint));
+        mxPoint inPosition = getPortPosition(getSplitLinkPort(split, inport));
+        mxPoint out1Position = getPortPosition(getSplitLinkPort(split, outport1));
+        mxPoint out2Position = getPortPosition(getSplitLinkPort(split, outport2));
+        if (input == null || input == inport) {
+            // get Input Port Orientation
+            inport.setOrientation(getInputOrientation(list, inPosition, splitPoint));
+            // get OutPut Port Orientation
+            for (int p = 0; p < list.size(); p++) {
+                List<mxPoint> list1 = list.get(p);
+                if (XcosRouteUtils.pointInLink(out1Position.getX(), out1Position.getY(), list1)) {
+                    outport1.setOrientation(getPortOrientation(list1, splitPoint));
+                }
+                if (XcosRouteUtils.pointInLink(out2Position.getX(), out2Position.getY(), list1)) {
+                    outport2.setOrientation(getPortOrientation(list1, splitPoint));
+                }
             }
-            if (XcosRouteUtils.pointInLink(out2Position.getX(), out2Position.getY(), list1)) {
-                outport2.setOrientation(getOutportOrientation(list1, splitPoint));
+        } else if (input == outport1) {
+            outport1.setOrientation(getInputOrientation(list, out1Position, splitPoint));
+            for (int p = 0; p < list.size(); p++) {
+                List<mxPoint> list1 = list.get(p);
+                if (XcosRouteUtils.pointInLink(inPosition.getX(), inPosition.getY(), list1)) {
+                    inport.setOrientation(getPortOrientation(list1, splitPoint));
+                }
+                if (XcosRouteUtils.pointInLink(out2Position.getX(), out2Position.getY(), list1)) {
+                    outport2.setOrientation(getPortOrientation(list1, splitPoint));
+                }
+            }
+        } else if (input == outport2) {
+            outport2.setOrientation(getInputOrientation(list, out2Position, splitPoint));
+            for (int p = 0; p < list.size(); p++) {
+                List<mxPoint> list1 = list.get(p);
+                if (XcosRouteUtils.pointInLink(out1Position.getX(), out1Position.getY(), list1)) {
+                    outport1.setOrientation(getPortOrientation(list1, splitPoint));
+                }
+                if (XcosRouteUtils.pointInLink(inPosition.getX(), inPosition.getY(), list1)) {
+                    inport.setOrientation(getPortOrientation(list1, splitPoint));
+                }
             }
         }
     }

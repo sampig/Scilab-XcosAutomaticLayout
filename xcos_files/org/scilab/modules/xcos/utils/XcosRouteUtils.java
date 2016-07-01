@@ -269,12 +269,31 @@ public abstract class XcosRouteUtils {
                 double blocky = g.getY() + iy;
                 double width = g.getWidth() + iw;
                 double height = g.getHeight() + ih;
-                if (x >= blockx && x <= (blockx + width) && y >= blocky && y < (blocky + height)) {
+                if (x >= blockx && x <= (blockx + width) && y >= blocky && y <= (blocky + height)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    /**
+     * Check whether a point is in a geometry.
+     *
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param geometry
+     * @return <b>true</b> if one point is in the geometry.
+     */
+    protected static boolean checkPointInGeometry(double x, double y, mxGeometry geometry) {
+        boolean flag = false;
+        flag = (x >= geometry.getX())
+                && (x <= geometry.getX() + geometry.getWidth())
+                && (y >= geometry.getY())
+                && (y <= geometry.getY() + geometry.getHeight());
+        return flag;
     }
 
     /**
