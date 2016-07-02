@@ -1076,11 +1076,6 @@ msgid "Auto-Position Split Block"
 msgstr ""
 
 #
-# File: modules/xcos/src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 
-msgid "Auto-Position for Split Block cannot be found."
-msgstr ""
-
-#
 # File: modules/xcos/src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 209
 # File: modules/xcos/src/xcos_fake_xml.c, line: 1831
 # File: modules/xcos/src/xcos_fake_xml.c, line: 1979
@@ -1112,11 +1107,6 @@ msgstr ""
 # File: modules/xcos/src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 
 # File: modules/xcos/src/xcos_fake_xml.c, line: 
 msgid "Optimal"
-msgstr ""
-
-#
-# File: modules/xcos/src/java/org/scilab/modules/xcos/utils/XcosMessages.java, line: 
-msgid "Optimal route cannot be found."
 msgstr ""
 
 #

@@ -16,9 +16,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.scilab.modules.gui.messagebox.ScilabModalDialog;
-import org.scilab.modules.gui.messagebox.ScilabModalDialog.IconType;
-import org.scilab.modules.xcos.XcosTab;
 import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.block.SplitBlock;
 import org.scilab.modules.xcos.graph.XcosDiagram;
@@ -65,6 +62,7 @@ public class XcosRoute {
      * @param allCells
      * @param graph
      * @param lockPort
+     *            if it is true, there is no need to calculate the orientation.
      */
     public void updateRoute(BasicLink link, Object[] allCells, XcosDiagram graph, boolean lockPort) {
         this.lockPortPosition = lockPort;
@@ -80,11 +78,7 @@ public class XcosRoute {
                 ((mxGraphModel) (graph.getModel())).setGeometry(link, geometry);
                 listRoute.clear();
             } else if (!lockPort) {
-                // if it cannot get the route, keep the same or change it to
-                // straight or give a pop windows to inform user.
-                ScilabModalDialog.show(XcosTab.get(graph),
-                        new String[] { XcosMessages.OLS_ROUTE_NOT_FOUND },
-                        XcosMessages.LINK_STYLE_OPTIMAL, IconType.INFORMATION_ICON);
+                // if it cannot get the route, change it to straight.
             }
         }
     }

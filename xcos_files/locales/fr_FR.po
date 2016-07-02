@@ -686,9 +686,6 @@ msgstr "Split Bloc"
 msgid "Auto-Position Split Block"
 msgstr "Auto-Position Split Bloc"
 
-msgid "Auto-Position for Split Block cannot be found."
-msgstr "Auto-Position Split Bloc ne peut pas être trouvé."
-
 msgid "Link Style"
 msgstr "Style de liens"
 
@@ -703,9 +700,6 @@ msgstr "Vertical"
 
 msgid "Optimal"
 msgstr "Optimal"
-
-msgid "Optimal route cannot be found."
-msgstr "Itinéraire optimal ne peut pas être trouvé."
 
 msgid "Set debugging level (0,1,2,3) <br/> it performs scicos_debug(n)"
 msgstr ""
