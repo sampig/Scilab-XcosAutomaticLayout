@@ -813,7 +813,7 @@
             </listitem>
             <listitem>
                 <para>
-                    <emphasis role="bold">Format: Auto-Position</emphasis>
+                    <emphasis role="bold">Format : Auto-positionnement</emphasis>
                 </para>
                 <para/>
                 <mediaobject>
@@ -823,17 +823,17 @@
                 </mediaobject>
                 <para/>
                 <para>
-                    This menu allows to change the position of the block.
+                    Ce menu permet de modifier automatiquement la position des blocs.
                 </para>
                 <para>
-                    First select the block and select the appropriate menu item or use the shortcuts
-                    (<emphasis>P</emphasis>), (<emphasis>N</emphasis>).
-                    The following list shows the results obtained.
+                    Sélectionner le(s) bloc(s) puis le menu adéquat ou utiliser le raccourci
+                    (<emphasis>P</emphasis>).
+                    La liste suivante montre les résultats obtenus.
                 </para>
                 <itemizedlist>
                     <listitem>
                         <para>
-                            Split Bloc(<emphasis>P</emphasis>)
+                            Bloc split (<emphasis>P</emphasis>)
                         </para>
                         <mediaobject>
                             <imageobject>

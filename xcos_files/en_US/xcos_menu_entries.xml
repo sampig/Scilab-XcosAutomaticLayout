@@ -813,14 +813,14 @@
                     This menu allows to change the position of the block.
                 </para>
                 <para>
-                    First select the block and select the appropriate menu item or use the shortcuts
-                    (<emphasis>P</emphasis>), (<emphasis>N</emphasis>).
+                    First select the block(s) and select the appropriate menu item or use the shortcuts
+                    (<emphasis>P</emphasis>).
                     The following list shows the results obtained.
                 </para>
                 <itemizedlist>
                     <listitem>
                         <para>
-                            Split Block(<emphasis>P</emphasis>)
+                            Split Block (<emphasis>P</emphasis>)
                         </para>
                         <mediaobject>
                             <imageobject>
