@@ -56,11 +56,11 @@ Relative files:
 
 A diagram in original version:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/OLS01.png?raw=true)
+![](resources/images/OLS01.png?raw=true)
 
 The diagram after using OLS:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/OLS02.png?raw=true)
+![](resources/images/OLS02.png?raw=true)
 
 
 ## [GSoC2016 Part II](https://summerofcode.withgoogle.com/projects/#6654261857353728)
@@ -95,18 +95,18 @@ Relative files:
 
 Diagram-A in original version:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP01.png?raw=true)
+![](resources/images/SBAP01.png?raw=true)
 
 Diagram-A after using SBAP:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP02.png?raw=true)
+![](resources/images/SBAP02.png?raw=true)
 
 Diagram-B in original version:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP11.png?raw=true)
+![](resources/images/SBAP11.png?raw=true)
 
 Diagram-B after using SBAP:
 
-![](https://github.com/sampig/Scilab-XcosAutomaticLayout/blob/master/resources/images/SBAP12.png?raw=true)
+![](resources/images/SBAP12.png?raw=true)
 
 
