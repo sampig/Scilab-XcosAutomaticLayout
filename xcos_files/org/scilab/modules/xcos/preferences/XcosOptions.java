@@ -74,13 +74,14 @@ public class XcosOptions {
         private boolean graphGridEnable = true;
         private int graphGrid = 10;
 
+        private int graphBlockDistance = 50;
+
         private Edition() {
         }
 
         /*
          * Preference accessors
          */
-
         public void setEdgeStyle(final int edgeStyle) {
             switch (edgeStyle) {
                 case 0: // straight
@@ -107,6 +108,10 @@ public class XcosOptions {
             this.graphGrid = graphGrid;
         }
 
+        public void setGraphBlockDistance(int graphBlockDistance) {
+            this.graphBlockDistance = graphBlockDistance;
+        }
+
         /*
          * Implementation accessors
          */
@@ -126,6 +131,10 @@ public class XcosOptions {
         public int getGraphGrid() {
             return graphGrid;
         }
+
+        public int getGraphBlockDistance() {
+            return graphBlockDistance;
+        }
     }
 
     @XConfAttribute
@@ -135,11 +144,11 @@ public class XcosOptions {
         }
 
         @XConfAttribute(tag = "xcos-simulation", attributes = { "final-integration-time", "integrator-absolute-tolerance", "integrator-relative-tolerance",
-                                                                "tolerance-on-time", "max-integration-interval", "real-time-scaling", "solver", "max-step-size", "trace"
-                                                              })
+                "tolerance-on-time", "max-integration-interval", "real-time-scaling", "solver", "max-step-size", "trace"
+        })
         private void set(final String finalIntegrationTime, final String integratorAbsoluteTolerance, final String integratorRelativeTolerance,
-                         final String toleranceOnTime, final String maxIntegrationTimeInterval, final String realTimeScaling, final int solver,
-                         final String maximumStepSize, final int debugLevel) {
+                final String toleranceOnTime, final String maxIntegrationTimeInterval, final String realTimeScaling, final int solver,
+                final String maximumStepSize, final int debugLevel) {
 
             VectorOfDouble defaultValues = new VectorOfDouble(8);
             defaultValues.set(ScicosParameters.FINAL_INTEGRATION_TIME, Double.parseDouble(finalIntegrationTime));

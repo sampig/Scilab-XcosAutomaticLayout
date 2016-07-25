@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.scilab.modules.xcos.block.BasicBlock;
 import org.scilab.modules.xcos.block.SplitBlock;
 import org.scilab.modules.xcos.link.BasicLink;
@@ -978,7 +979,7 @@ public abstract class XcosRouteUtils {
      * @param port
      * @return
      */
-    protected Orientation getPortOrientation(BasicPort port) {
+    protected static Orientation getPortOrientation(BasicPort port) {
         if (port.getParent() == null) {
             return Orientation.EAST;
         }

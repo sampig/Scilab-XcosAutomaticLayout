@@ -16,8 +16,6 @@
 
 package org.scilab.modules.xcos;
 
-import com.mxgraph.util.mxEvent;
-import com.mxgraph.util.mxEventObject;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.lang.ref.WeakReference;
@@ -93,6 +91,7 @@ import org.scilab.modules.xcos.actions.ViewGridAction;
 import org.scilab.modules.xcos.actions.ViewViewportAction;
 import org.scilab.modules.xcos.actions.XcosDemonstrationsAction;
 import org.scilab.modules.xcos.actions.XcosDocumentationAction;
+import org.scilab.modules.xcos.block.actions.AutoPositionNormalBlockAction;
 import org.scilab.modules.xcos.block.actions.AutoPositionSplitBlockAction;
 import org.scilab.modules.xcos.block.actions.BlockDocumentationAction;
 import org.scilab.modules.xcos.block.actions.BlockParametersAction;
@@ -122,6 +121,9 @@ import org.scilab.modules.xcos.palette.actions.ViewPaletteBrowserAction;
 import org.scilab.modules.xcos.palette.view.PaletteManagerView;
 import org.scilab.modules.xcos.preferences.XcosOptions;
 import org.scilab.modules.xcos.utils.XcosMessages;
+
+import com.mxgraph.util.mxEvent;
+import com.mxgraph.util.mxEventObject;
 
 /**
  * Xcos tab operations
@@ -498,6 +500,7 @@ public class XcosTab extends SwingScilabDockablePanel implements SimpleTab {
         blockPosition = ScilabMenu.createMenu();
         blockPosition.setText(XcosMessages.BLOCK_AUTO_POSITION);
         blockPosition.add(AutoPositionSplitBlockAction.createMenu(diagram));
+        blockPosition.add(AutoPositionNormalBlockAction.createMenu(diagram));
         format.add(blockPosition);
         format.addSeparator();
 

@@ -54,6 +54,7 @@ import org.scilab.modules.xcos.Xcos;
 import org.scilab.modules.xcos.XcosTab;
 import org.scilab.modules.xcos.actions.EditFormatAction;
 import org.scilab.modules.xcos.actions.ShowHideShadowAction;
+import org.scilab.modules.xcos.block.actions.AutoPositionNormalBlockAction;
 import org.scilab.modules.xcos.block.actions.AutoPositionSplitBlockAction;
 import org.scilab.modules.xcos.block.actions.BlockDocumentationAction;
 import org.scilab.modules.xcos.block.actions.BlockParametersAction;
@@ -148,6 +149,12 @@ public class BasicBlock extends XcosCell implements Serializable {
     }
 
     private boolean locked;
+
+    /**
+     * Hook used to implement specifix behavior after any parameter update and before re-layouting the block
+     */
+    public void updateBlockView() {
+    }
 
     /**
      * Represent a simulation function type compatible with Scilab/Scicos function type descriptors.
@@ -756,6 +763,11 @@ public class BasicBlock extends XcosCell implements Serializable {
         sbapMenuItem.setEnabled(false);
         menuList.put(AutoPositionSplitBlockAction.class, sbapMenuItem);
         format.add(sbapMenuItem);
+        MenuItem nbapMenuItem = AutoPositionNormalBlockAction.createMenu(graph);
+        nbapMenuItem.setText(XcosMessages.BLOCK_AUTO_POSITION_NORMAL_BLOCK_CONTEXTUAL);
+        nbapMenuItem.setEnabled(false);
+        menuList.put(AutoPositionNormalBlockAction.class, nbapMenuItem);
+        format.add(nbapMenuItem);
         /*--- */
         format.addSeparator();
         /*--- */
@@ -790,6 +802,9 @@ public class BasicBlock extends XcosCell implements Serializable {
      */
     protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList) {
         // To be overridden by sub-classes
+        if (!(this instanceof SplitBlock)) {
+            menuList.get(AutoPositionNormalBlockAction.class).setEnabled(true);
+        }
     }
 
     /**

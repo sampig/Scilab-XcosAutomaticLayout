@@ -877,7 +877,7 @@ public abstract class BlockAutoPositionUtils {
      *            the port
      * @return
      */
-    private static mxPoint getPortPosition(mxICell port) {
+    protected static mxPoint getPortPosition(mxICell port) {
         mxPoint point = new mxPoint();
         if (port == null) {
             return null;
