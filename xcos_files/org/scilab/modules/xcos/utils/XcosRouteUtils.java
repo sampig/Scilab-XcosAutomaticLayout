@@ -1086,6 +1086,33 @@ public abstract class XcosRouteUtils {
      * @param orientation2
      * @return
      */
+    protected static boolean isOrientationParallel(Orientation orientation1, Orientation orientation2) {
+        if (orientation1 == Orientation.EAST && orientation2 == Orientation.WEST) {
+            return true;
+        }
+        if (orientation1 == Orientation.WEST && orientation2 == Orientation.EAST) {
+            return true;
+        }
+        if (orientation1 == Orientation.SOUTH && orientation2 == Orientation.NORTH) {
+            return true;
+        }
+        if (orientation1 == Orientation.NORTH && orientation2 == Orientation.SOUTH) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if two port are parallel.
+     *
+     * @param x1
+     * @param y1
+     * @param x2
+     * @param y2
+     * @param orientation1
+     * @param orientation2
+     * @return
+     */
     protected static boolean isOrientationParallel(double x1, double y1, double x2, double y2, Orientation orientation1, Orientation orientation2) {
         if (orientation1 == orientation2) {
             return true;

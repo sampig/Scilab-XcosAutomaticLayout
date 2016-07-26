@@ -90,7 +90,7 @@ public abstract class NormalBlockAutoPositionUtils {
 
         // Thirdly, deal with start/end blocks.
         List<BasicBlock> blocksStartEnd = reorderSelectedStartEndBlocks(listBlocks);
-        changeStartEndBlocksPosition(blocksStartEnd, listConnected, all, graph);
+        changeStartEndBlocksPosition(blocksStartEnd, all, graph);
     }
 
     /**
@@ -146,7 +146,7 @@ public abstract class NormalBlockAutoPositionUtils {
         int l = blocks.size();
         for (int i = 0; i < l - 1; i++) {
             for (int j = l - 1; j > i; j--) {
-                if (isRightDown(blocks.get(j - 1), blocks.get(j))) {
+                if (isRightBelow(blocks.get(j - 1), blocks.get(j))) {
                     // if blocks[j] is on the right (down) of blocks[j - 1],
                     tmp = blocks.get(j);
                     blocks.set(j, blocks.get(j - 1));
@@ -171,7 +171,7 @@ public abstract class NormalBlockAutoPositionUtils {
         int l = blocks.length;
         for (int i = 0; i < l - 1; i++) {
             for (int j = l - 1; j > i; j--) {
-                if (isRightDown(blocks[j - 1], blocks[j])) {
+                if (isRightBelow(blocks[j - 1], blocks[j])) {
                     // if blocks[j] is on the right (down) of blocks[j - 1],
                     tmp = blocks[j];
                     blocks[j] = blocks[j - 1];
@@ -333,18 +333,211 @@ public abstract class NormalBlockAutoPositionUtils {
         return count;
     }
 
+    /**
+     * Change the position of the block. <br/>
+     * <ol>
+     * <li>Update the positions of blocks.</li>
+     * <li></li>
+     * <li></li>
+     * <li></li>
+     * </ol>
+     *
+     * @param basicblock
+     *            the block
+     * @param all
+     *            all the cells in graph
+     * @param graph
+     */
     private static void changeNonstartBlockPosition(BasicBlock basicblock, Object[] all, XcosDiagram graph) {
         // TODO:
+        List<BasicBlock> listBlocks = new ArrayList<>(0);
+        for (Object o : all) {
+            if (isNormalBlock(o) && o != basicblock) {
+                listBlocks.add((BasicBlock) o);
+            }
+        }
+
+        int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
+                : XcosOptions.getEdition().getGraphBlockDistance();
+        for (int i = 0; i < listBlocks.size(); i++) {
+            if (listBlocks.get(i) == basicblock) {
+                continue;
+            }
+            BasicBlock block = listBlocks.get(i);
+            if (isBlocksClosed(basicblock, block)) {
+                Orientation position = blockOrientation(basicblock, block);
+                switch (position) {
+                    case WEST: // if the closed block is on the left of the basicblock, move the basicblock to right
+                        List<BasicBlock> listRight = getAllRightBlocks(basicblock, listBlocks);
+                        moveBlock(basicblock, blocksDistance, Orientation.EAST, graph);
+                        moveBlocks(listRight, blocksDistance, Orientation.EAST, graph);
+                        break;
+                    case NORTH: // up
+                        // do nothing for vertical position.
+                        break;
+                    case EAST: // if the closed block is on the right of the basicblock, move the block to right
+                        List<BasicBlock> listBlockRight = getAllRightBlocks(block, listBlocks);
+                        moveBlock(block, blocksDistance, Orientation.EAST, graph);
+                        moveBlocks(listBlockRight, blocksDistance, Orientation.EAST, graph);
+                        break;
+                    case SOUTH: // down
+                        // do nothing for vertical position.
+                        break;
+                }
+            }
+        }
     }
 
-    private static List<BasicBlock> getAllRightBlocks(BasicBlock basicblock, Object[] all) {
-        List<BasicBlock> listRgiht = new ArrayList<>(0);
-        return listRgiht;
+    /**
+     * Get all blocks which are on the right of the basicblock.
+     *
+     * @param basicblock
+     *            the block
+     * @param listBlocks
+     *            all normal blocks
+     * @return
+     */
+    private static List<BasicBlock> getAllRightBlocks(BasicBlock basicblock, List<BasicBlock> listBlocks) {
+        mxGeometry geometry = basicblock.getGeometry();
+        List<BasicBlock> listRight = new ArrayList<>(0);
+        for (Object o : listBlocks) {
+            if (isNormalBlock(o) && basicblock != o) {
+                BasicBlock block = (BasicBlock) o;
+                mxGeometry geometry2 = block.getGeometry();
+                if (geometry2.getCenterX() > geometry.getCenterX()) {
+                    listRight.add(block);
+                }
+            }
+        }
+        return listRight;
     }
 
-    private static List<BasicBlock> getLeftDownBlocks(BasicBlock basicblock, Object[] all) {
-        List<BasicBlock> listLeftDown = new ArrayList<>(0);
-        return listLeftDown;
+    /**
+     * Check if two blocks are too closed.
+     *
+     * @param block1
+     *            the first block
+     * @param block2
+     *            the second block
+     * @return
+     */
+    private static boolean isBlocksClosed(BasicBlock block1, BasicBlock block2) {
+        int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
+                : XcosOptions.getEdition().getGraphBlockDistance();
+
+        // get the 4 vertices of each block
+        mxPoint[] points1 = new mxPoint[4];
+        mxGeometry geo1 = block1.getGeometry();
+        mxPoint[] points2 = new mxPoint[4];
+        mxGeometry geo2 = block2.getGeometry();
+        points1[0] = new mxPoint(geo1.getX(), geo1.getY());
+        points1[1] = new mxPoint(geo1.getX() + geo1.getWidth(), geo1.getY());
+        points1[2] = new mxPoint(geo1.getX() + geo1.getWidth(), geo1.getY() + geo1.getHeight());
+        points1[3] = new mxPoint(geo1.getX(), geo1.getY() + geo1.getHeight());
+        points2[0] = new mxPoint(geo2.getX(), geo2.getY());
+        points2[1] = new mxPoint(geo2.getX() + geo2.getWidth(), geo2.getY());
+        points2[2] = new mxPoint(geo2.getX() + geo2.getWidth(), geo2.getY() + geo2.getHeight());
+        points2[3] = new mxPoint(geo2.getX(), geo2.getY() + geo2.getHeight());
+
+        for (int i = 0; i < points1.length; i++) {
+            for (int j = 0; j < points2.length; j++) {
+                // if any two of these points are too closed.
+                if (Math.abs(points1[i].getX() - points2[j].getX()) <= blocksDistance
+                        && Math.abs(points1[i].getY() - points2[j].getY()) <= blocksDistance) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the relative position of block to blockBase. <br/>
+     * <ol>
+     * <li>EAST: RIGHT</li>
+     * <li>WEST: LEFT</li>
+     * <li>SOUTH: DOWN</li>
+     * <li>NORTH: UP</li>
+     * </ol>
+     *
+     * @param blockBase
+     *            the base block
+     * @param block
+     *            the block
+     * @return
+     */
+    private static Orientation blockOrientation(BasicBlock blockBase, BasicBlock block) {
+        mxGeometry geoBase = blockBase.getGeometry();
+        mxGeometry geoBlock = block.getGeometry();
+        double xBase = geoBase.getCenterX();
+        double yBase = geoBase.getCenterY();
+        double xBlock = geoBlock.getCenterX();
+        double yBlock = geoBlock.getCenterY();
+        double x = xBlock - xBase;
+        double y = yBlock - yBase;
+
+        if (x >= Math.abs(y)) {
+            return Orientation.EAST;
+        } else if (x <= -Math.abs(y)) {
+            return Orientation.WEST;
+        } else if (y >= Math.abs(x)) {
+            return Orientation.SOUTH;
+        } else if (y <= -Math.abs(x)) {
+            return Orientation.NORTH;
+        }
+        return Orientation.EAST;
+    }
+
+    /**
+     * Move all blocks.
+     *
+     * @param listBlocks
+     *            a list of blocks
+     * @param distance
+     *            distance to move
+     * @param orientation
+     *            orientation to move
+     * @param graph
+     */
+    private static void moveBlocks(List<BasicBlock> listBlocks, int distance, Orientation orientation, XcosDiagram graph) {
+        for (BasicBlock basicblock : listBlocks) {
+            moveBlock(basicblock, distance, orientation, graph);
+        }
+    }
+
+    /**
+     * Move a block.
+     *
+     * @param basicblock
+     *            the block
+     * @param distance
+     *            distance to move
+     * @param orientation
+     *            orientation to move
+     * @param graph
+     */
+    private static void moveBlock(BasicBlock basicblock, int distance, Orientation orientation, XcosDiagram graph) {
+        mxGeometry blockGeo = (mxGeometry) basicblock.getGeometry().clone();
+        //(mxGeometry) graph.getModel().getGeometry(basicblock).clone();
+        mxPoint add = new mxPoint();
+        switch (orientation) {
+            case EAST:
+                add.setX(distance);
+                break;
+            case WEST:
+                add.setX(-distance);
+                break;
+            case SOUTH:
+                add.setY(distance);
+                break;
+            case NORTH:
+                add.setY(-distance);
+                break;
+        }
+        blockGeo.setX(blockGeo.getX() + add.getX());
+        blockGeo.setY(blockGeo.getY() + add.getY());
+        graph.getModel().setGeometry(basicblock, blockGeo);
     }
 
     /**
@@ -352,14 +545,11 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param blocksStartEnd
      *            all the start/end blocks
-     * @param listConnected
-     *            the list of all connected blocks
      * @param all
      *            all the cells in graph
      * @param graph
      */
-    private static void changeStartEndBlocksPosition(List<BasicBlock> blocksStartEnd, List<BasicBlock> listConnected,
-            Object[] all, XcosDiagram graph) {
+    private static void changeStartEndBlocksPosition(List<BasicBlock> blocksStartEnd, Object[] all, XcosDiagram graph) {
         List<List<BasicBlock>> list = getSameTargetBlocks(blocksStartEnd);
         List<BasicBlock> listChanged = new ArrayList<>(0);
 
@@ -371,7 +561,7 @@ public abstract class NormalBlockAutoPositionUtils {
 
         // for those single start/end blocks,
         for (BasicBlock block : blocksStartEnd) {
-            if (!listConnected.contains(block) && !listChanged.contains(block)) {
+            if (!listChanged.contains(block)) { // !listConnected.contains(block) &&
                 changeSingleStartEndBlockPosition(block, all, graph);
             }
         }
@@ -470,6 +660,9 @@ public abstract class NormalBlockAutoPositionUtils {
 
         // the blocks in the list have the same connected block and the connected ports have the same orientation.
         BasicBlock sameBlock = getConnectedBlock(listBlocks.get(0), (BasicPort) listBlocks.get(0).getChildAt(0));
+        if (sameBlock instanceof SplitBlock) {
+            return;
+        }
         mxGeometry sameGeometry = sameBlock.getGeometry();
         BasicPort onePort = getConnectedPort(listBlocks.get(0), (BasicPort) listBlocks.get(0).getChildAt(0));
         Orientation sameOrientation = XcosRouteUtils.getPortOrientation(onePort);
@@ -697,6 +890,16 @@ public abstract class NormalBlockAutoPositionUtils {
         mxPoint otherPoint = BlockAutoPositionUtils.getPortPosition(otherPort);
         double x2 = otherPoint.getX();
         double y2 = otherPoint.getY();
+        if (otherPort.getParent() instanceof SplitBlock) {
+            return;
+        }
+
+        // if two ports are unable to be opposite.
+        Orientation orientation1 = XcosRouteUtils.getPortOrientation(port);
+        Orientation orientation2 = XcosRouteUtils.getPortOrientation(otherPort);
+        if (!XcosRouteUtils.isOrientationParallel(orientation1, orientation2)) {
+            return;
+        }
 
         XcosRoute util = new XcosRoute();
         Object[] allObstacles = util.getAllOtherCells(all, block, port, link, otherPort);
@@ -825,7 +1028,7 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
-     * Check if block2 is on the right (down) of block1.<br/>
+     * Check if block2 is on the right (below) of block1.<br/>
      * If block2 is on the right of block1 or block2 is exactly below block2, return true.
      *
      * @param block1
@@ -834,7 +1037,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *            the second block
      * @return
      */
-    private static boolean isRightDown(BasicBlock block1, BasicBlock block2) {
+    private static boolean isRightBelow(BasicBlock block1, BasicBlock block2) {
         mxGeometry geometry1 = block1.getGeometry();
         mxGeometry geometry2 = block2.getGeometry();
         if ((geometry1.getX() < geometry2.getX())
