@@ -99,7 +99,7 @@ public class AutoPositionNormalBlockAction extends VertexSelectionDependantActio
 
 
     /**
-     * Enable the selection if there is at least a Normallock in the selection.
+     * Enable the selection if there is at least a Normal Block in the selection.
      */
     private final class NormalBlockSelectionDependantConstraint extends ActionConstraint {
 

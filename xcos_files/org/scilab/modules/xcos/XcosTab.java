@@ -16,6 +16,8 @@
 
 package org.scilab.modules.xcos;
 
+import com.mxgraph.util.mxEvent;
+import com.mxgraph.util.mxEventObject;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.lang.ref.WeakReference;
@@ -121,9 +123,6 @@ import org.scilab.modules.xcos.palette.actions.ViewPaletteBrowserAction;
 import org.scilab.modules.xcos.palette.view.PaletteManagerView;
 import org.scilab.modules.xcos.preferences.XcosOptions;
 import org.scilab.modules.xcos.utils.XcosMessages;
-
-import com.mxgraph.util.mxEvent;
-import com.mxgraph.util.mxEventObject;
 
 /**
  * Xcos tab operations

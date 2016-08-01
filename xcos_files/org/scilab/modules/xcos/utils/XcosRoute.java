@@ -36,8 +36,8 @@ import com.mxgraph.view.mxCellState;
 public class XcosRoute {
 
     private List<mxPoint> listRoute = new ArrayList<mxPoint>(0);
-    // if it is true, the position of the port will not be changed.
-    private boolean lockPortPosition = false;
+    // if it is true, the orientation of the port will not be changed.
+    private boolean lockPortOrientation = false;
 
     public  List<mxPoint> getList() {
         return listRoute;
@@ -51,8 +51,8 @@ public class XcosRoute {
      * @param graph
      */
     public void updateRoute(BasicLink link, Object[] allCells, XcosDiagram graph) {
-        this.lockPortPosition = false;
-        this.updateRoute(link, allCells, graph, lockPortPosition);
+        this.lockPortOrientation = false;
+        this.updateRoute(link, allCells, graph, lockPortOrientation);
     }
 
     /**
@@ -65,7 +65,7 @@ public class XcosRoute {
      *            if it is true, there is no need to calculate the orientation.
      */
     public void updateRoute(BasicLink link, Object[] allCells, XcosDiagram graph, boolean lockPort) {
-        this.lockPortPosition = lockPort;
+        this.lockPortOrientation = lockPort;
         mxICell sourceCell = link.getSource();
         mxICell targetCell = link.getTarget();
         Object[] allOtherCells = getAllOtherCells(allCells, link, sourceCell, targetCell);
@@ -149,15 +149,21 @@ public class XcosRoute {
         }
         // re-calculate the orientation for the SplitBlock.
         if (sourceCell.getParent() instanceof SplitBlock) {
-            if (lockPortPosition) { // if it is locked, use the default orientation.
+            if (lockPortOrientation) { // if it is locked, use the default orientation.
                 sourcePortOrien = ((BasicPort) sourceCell).getOrientation();
+                if (sourcePortOrien == null) {
+                    return false;
+                }
             } else {
                 sourcePortOrien = this.getNewOrientation(sourceCell, srcx, srcy, targetCell, tgtx, tgty, graph);
             }
         }
         if (targetCell.getParent() instanceof SplitBlock) {
-            if (lockPortPosition) { // if it is locked, use the default orientation.
+            if (lockPortOrientation) { // if it is locked, use the default orientation.
                 targetPortOrien = ((BasicPort) targetCell).getOrientation();
+                if (targetPortOrien == null) {
+                    return false;
+                }
             } else {
                 targetPortOrien = this.getNewOrientation(targetCell, tgtx, tgty, sourceCell, srcx, srcy, graph);
             }
@@ -229,38 +235,38 @@ public class XcosRoute {
             distance = XcosRouteUtils.SPLITBLOCK_AWAY_DISTANCE;
         }
         switch (orien) {
-        case EAST:
-            point.setX(point.getX() + distance);
-            while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
-                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
-                point.setX(point.getX() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
-            }
-            break;
-        case SOUTH:
-            point.setY(point.getY() + distance);
-            while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
-                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
-                point.setY(point.getY() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
-            }
-            break;
-        case WEST:
-            point.setX(point.getX() - distance);
-            while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
-                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
-                point.setX(point.getX() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
-            }
-            break;
-        case NORTH:
-            point.setY(point.getY() - distance);
-            while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
-                    && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
-                            || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
-                point.setY(point.getY() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
-            }
-            break;
+            case EAST:
+                point.setX(point.getX() + distance);
+                while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                        && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                                || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    point.setX(point.getX() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
+                }
+                break;
+            case SOUTH:
+                point.setY(point.getY() + distance);
+                while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                        && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                                || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    point.setY(point.getY() - XcosRouteUtils.BEAUTY_AWAY_REVISION);
+                }
+                break;
+            case WEST:
+                point.setX(point.getX() - distance);
+                while (Math.abs(point.getX() - portX) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                        && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                                || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    point.setX(point.getX() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
+                }
+                break;
+            case NORTH:
+                point.setY(point.getY() - distance);
+                while (Math.abs(point.getY() - portY) > XcosRouteUtils.BEAUTY_AWAY_REVISION
+                        && (XcosRouteUtils.checkObstacle(portX, portY, point.getX(), point.getY(), allCells)
+                                || XcosRouteUtils.checkPointInBlocks(point.getX(), point.getY(), allCells))) {
+                    point.setY(point.getY() + XcosRouteUtils.BEAUTY_AWAY_REVISION);
+                }
+                break;
         }
         return point;
     }

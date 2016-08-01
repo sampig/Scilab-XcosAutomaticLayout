@@ -209,6 +209,11 @@ public abstract class BlockAutoPositionUtils {
                 // keep it in the original position.
                 return;
             }
+            if (list.size() <= 1) {
+                // if the ports of two blocks are aligned within an error(deviation),
+                // adjust the positions of ports to make the link vertical/horizontal.
+                adjustCell(targetPort, sourcePort);
+            }
             if (targetPort != null) {
                 list.add(getPortPosition(targetPort));
             }
@@ -545,16 +550,16 @@ public abstract class BlockAutoPositionUtils {
      * Adjust the cell position align to the base one only if their difference
      * are less than XcosRouteUtils.ALIGN_STRICT_ERROR.
      *
-     * @param cell
+     * @param port
      *            the cell should be moved
-     * @param cellBase
+     * @param portBase
      *            the based cell to be aligned to
      */
-    private static void adjustCell(mxICell cell, mxICell cellBase) {
+    private static void adjustCell(mxICell port, mxICell portBase) {
         double error = XcosRouteUtils.ALIGN_STRICT_ERROR;
-        mxPoint cellPoint = getPortPosition(cell);
-        mxGeometry cellGeo = cell.getParent().getGeometry();
-        mxPoint cellBasePoint = getPortPosition(cellBase);
+        mxPoint cellPoint = getPortPosition(port);
+        mxGeometry cellGeo = port.getParent().getGeometry();
+        mxPoint cellBasePoint = getPortPosition(portBase);
         if (Math.abs(cellPoint.getX() - cellBasePoint.getX()) <= error) {
             cellGeo.setX(cellBasePoint.getX() - cellGeo.getWidth() / 2);
         }
