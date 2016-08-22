@@ -19,7 +19,7 @@ Table of contents
   * [GSoC 2016 - Part II](#gsoc2016-part-ii)
     * [Schedule](#ii-schedule)
     * [Functionality](#ii-functionality)
-    * [Task](#ii-task)
+    * [Implementation](#ii-implementation)
     * [Result](#ii-result)
 
 ## [GSoC2015 Part I](http://www.google-melange.com/gsoc/project/details/google/gsoc2015/zhuchenfeng/5724160613416960):
@@ -68,19 +68,25 @@ The diagram after using OLS:
 ### II-Schedule
 
 1. Week01 - Check the previous feature (05.23-05.29): Review my previous work based on the latest master branch. Check whether everything works well and try to improve Optimal Link Style if possible.
-2. Week02-03 - Automatic Position of Split Block (05.30-06.12): Implement this feature. Test it and make a commit.
-3. Week04-07 - Automatic Position of Basic Block (06.13-07.10): Implement this feature. Test it and make a commit. This feature might be more difficult and possibly require more time.
-4. Week08-09 - Auto-rearrange its Link When Moving a Block (07.11-07.24): Implement this feature. Test it and make a commit.
-5. Week10-11 - Auto-rearrange its Link When Moving a Block (07.25-08.07): Implement this feature. Test it and make a commit.
-6. Week12 - Final (12th Week): Beautify codes, make final commits and write documentation.
+2. Week02-05 - Automatic Position of Split Block (05.30-06.26): Implement this feature. Test it and make a commit.
+3. Week04-09 - Automatic Position of Basic Block (06.27-07.24): Implement this feature. Test it and make a commit. This feature might be more difficult and possibly require more time.
+4. Week10-12 - Auto-layout Preview (07.25-08.14): Implement this feature. Test it and make a commit.
+5. Week13 - Final (08.15 - 08.21): Beautify codes, make final commits and write documentation.
 
 ### II-Functionality
 
 - [x] Block Automatic Position - Split Blocks (BAP - SBAP)
-- [ ] Block Automatic Position - Basic Blocks
+    - [ ] When there is only one single split block in the whole part of links.
+    - [ ] When there are at least 2 split blocks in the whole part of links.
+- [ ] Block Automatic Position - Normal Blocks (BAP - NBAP)
+    - [x] The blocks which has only 1 IN/OUT port. (Start/End blocks)
+    - [x] The blocks which are not Start/End blocks.
+    - [ ] Some blocks which are connected.
 - [ ] Automatic Layout Preview
+    - [ ] When creating a link.
+    - [ ] When moving a block.
 
-### II-Task
+### II-Implementation
 
 Relative files:
 
@@ -88,6 +94,46 @@ Relative files:
 | -------------- | ------------------ | ------------- |
 | ~.link.actions | AutoPositionSplitBlockAction | Action events |
 | ~.utils  | BlockAutoPositionUtils  | Compute position |
+| ~.link.actions | AutoPositionNormalBlockAction | Action events |
+| ~.utils  | NormalBlockAutoPositionUtils  | Compute position |
+
+#### Block Auto-Position - Split Block
+
+Option to set a new position for the SplitBlock. Select the SplitBlocks and press 'P' to find a new position for the SplitBlocks and their links.
+
+- Automatically move the SplitBlocks to a new position.
+    -If there is only 1 SplitBlock in the whole part of links, move it to the intersection of the 2 optimal routes.
+    -If there are 2 or more SplitBlocks, all the SplitBlocks in that whole part of links will be moved no matter how many SplitBlocks are selected. 
+- Also, rework their links if it brings a better alignment. Based on the original optimal routes and the position of SplitBlocks, find the optimal routes for each part of links.
+- Add menus in the menubar and contextmenu (only enabled when one SplitBlock is selected). 
+
+#### Block Auto-Position - Normal Block
+
+Option to set a new position for the Normal Block (BasicBlock excluding SplitBlock and TextBlock). Select the Normal Blocks and press 'N' to find a new position for the Normal Blocks.
+
+1. Select the blocks which has only 1 IN/OUT port. (Start/End blocks)
+    - Choose multiple start/end blocks.
+    - Choose several single start/end blocks. 
+2. Select the blocks which are not Start/End blocks.
+    - If there are blocks on left which are closed, move the block and its right blocks.
+    - If there are blocks on right which are closed, move this block and its right blocks.
+    - If there are blocks above which are closed, move the block downwards.
+    - If there are blocks below which are closed, move this block downwards. 
+3. Select some blocks which are connected.
+    - Hierarchical Flat connection:
+        - make them horizontally aligned if there are more ports in horizontal - direction.
+        - make them vertically aligned if there are more ports in vertical direction. 
+    - Tree connection:
+        - calculate the depth and the width of the tree.
+        - choose the root (the first OUT block) as start block.
+        - arrange the positions of the blocks in each level. 
+    - Reversed Tree connection:
+        - calculate the depth and the width of the tree.
+        - choose the last IN block as start block.
+        - arrange the positions of the blocks in each level. 
+    - Cycled connection: (unfinished)
+        - deal with it as a hierarchical flat connection or tree connection.
+        - Choose the block on the first left as the start block. 
 
 ### II-Result
 
@@ -109,4 +155,36 @@ Diagram-B after using SBAP:
 
 ![](resources/images/SBAP12.png?raw=true)
 
+#### Block Automatic Position - Normal Blocks
 
+Diagram-C in original version:
+
+![](resources/images/NBAP01.png?raw=true)
+
+Diagram-C after using NBAP for the start/end blocks:
+
+![](resources/images/NBAP02.png?raw=true)
+
+Diagram-D in original version:
+
+![](resources/images/NBAP11.png?raw=true)
+
+Diagram-D after using NBAP for keeping a distance away:
+
+![](resources/images/NBAP12.png?raw=true)
+
+Diagram-E in original version:
+
+![](resources/images/NBAP21.png?raw=true)
+
+Diagram-E after using NBAP for connected blocks (Hierarchical Flat connection):
+
+![](resources/images/NBAP22.png?raw=true)
+
+Diagram-F in original version:
+
+![](resources/images/NBAP31.png?raw=true)
+
+Diagram-F after using NBAP for connected blocks (Tree connection):
+
+![](resources/images/NBAP32.png?raw=true)
