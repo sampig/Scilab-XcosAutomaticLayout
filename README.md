@@ -76,8 +76,8 @@ The diagram after using OLS:
 ### II-Functionality
 
 - [x] Block Automatic Position - Split Blocks (BAP - SBAP)
-    - [ ] When there is only one single split block in the whole part of links.
-    - [ ] When there are at least 2 split blocks in the whole part of links.
+    - [x] When there is only one single split block in the whole part of links.
+    - [x] When there are at least 2 split blocks in the whole part of links.
 - [ ] Block Automatic Position - Normal Blocks (BAP - NBAP)
     - [x] The blocks which has only 1 IN/OUT port. (Start/End blocks)
     - [x] The blocks which are not Start/End blocks.
