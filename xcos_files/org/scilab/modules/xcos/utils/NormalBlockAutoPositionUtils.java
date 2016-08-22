@@ -25,7 +25,9 @@ import org.scilab.modules.xcos.port.BasicPort;
 import org.scilab.modules.xcos.port.Orientation;
 import org.scilab.modules.xcos.port.command.CommandPort;
 import org.scilab.modules.xcos.port.control.ControlPort;
+import org.scilab.modules.xcos.port.input.ImplicitInputPort;
 import org.scilab.modules.xcos.port.input.InputPort;
+import org.scilab.modules.xcos.port.output.ImplicitOutputPort;
 import org.scilab.modules.xcos.port.output.OutputPort;
 import org.scilab.modules.xcos.preferences.XcosOptions;
 
@@ -46,6 +48,16 @@ public abstract class NormalBlockAutoPositionUtils {
     public final static int DEFAULT_BEAUTY_BLOCKS_DISTANCE = 40;
 
     public final static int DEFAULT_ALIGNED_BLOCKS_DISTANCE = 20;
+
+    /**
+     * The simple type of port.
+     */
+    public enum PortType {IN, OUT};
+
+    /**
+     * The type of connection.
+     */
+    public enum ConnectType {FLAT, TREE, REVTREE, CYCLED, OTHER};
 
     /**
      * Change the position of the Normal Blocks:<br/>
@@ -76,7 +88,7 @@ public abstract class NormalBlockAutoPositionUtils {
         List<List<BasicBlock>> listBlocksConnected = getSeletecedConnectedBlocks(listBlocks);
         List<BasicBlock> listConnected = new ArrayList<>(0);
         for (List<BasicBlock> blocksConnected : listBlocksConnected) {
-            // TODO:
+            changeConnectedBlocksPosition(blocksConnected, all, graph);
             listConnected.addAll(blocksConnected);
         }
 
@@ -298,6 +310,54 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
+     * Check if the basic block contains a CommandPort, a ControlPort, a ImplicitInputPort or a ImplicitOutputPort.
+     *
+     * @param basicblock
+     *            the basic block
+     * @return <b>TRUE</b> if it does NOT contain any
+     */
+    private static boolean isExplicitBlock(BasicBlock basicblock) {
+        if (containCommandControlPort(basicblock) || containImplicitPort(basicblock)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check if the basic block contains a CommandPort or a ControlPort.
+     *
+     * @param basicblock
+     *            the basic block
+     * @return <b>TRUE</b> if it contains
+     */
+    private static boolean containCommandControlPort(BasicBlock basicblock) {
+        for (int i = 0; i < basicblock.getChildCount(); i++) {
+            mxICell port = basicblock.getChildAt(i);
+            if ((port instanceof CommandPort) || (port instanceof ControlPort)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if the basic block contains a ImplicitInputPort or a ImplicitOutputPort.
+     *
+     * @param basicblock
+     *            the basic block
+     * @return <b>TRUE</b> if it contains
+     */
+    private static boolean containImplicitPort(BasicBlock basicblock) {
+        for (int i = 0; i < basicblock.getChildCount(); i++) {
+            mxICell port = basicblock.getChildAt(i);
+            if ((port instanceof ImplicitInputPort) || (port instanceof ImplicitOutputPort)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Get the total number of OutputPort/CommandPort in the block.
      *
      * @param block
@@ -334,12 +394,215 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
-     * Change the position of the block. <br/>
+     * Change the position of the blocks which are connected.
      * <ol>
-     * <li>Update the positions of blocks.</li>
-     * <li></li>
-     * <li></li>
-     * <li></li>
+     * <li>Hierarchical Flat connection: horizontal flat. b --> b --> b</li>
+     * <li>Tree connection.</li>
+     * <li>Reversed Tree connection.</li>
+     * <li>Cycled connection.</li>
+     * </ol>
+     *
+     * @param listConnected
+     *            the list of the connected blocks
+     * @param all
+     *            all the cells in graph
+     * @param graph
+     */
+    private static void changeConnectedBlocksPosition(List<BasicBlock> listConnected, Object[] all, XcosDiagram graph) {
+        // TODO:
+        int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
+                : XcosOptions.getEdition().getGraphBlockDistance();
+        BasicBlock startBlock = chooseStartBlock(listConnected);
+        ConnectType connectType = checkConnectType(listConnected);
+        switch (connectType) {
+            case FLAT:
+                changeNonstartBlockPosition(startBlock, all, graph);
+                mxGeometry startGeo = startBlock.getGeometry();
+                double xStart = startGeo.getCenterX();
+                double yStart = startGeo.getCenterY();
+                mxPoint position = new mxPoint(xStart, yStart);
+                double width = startGeo.getWidth();
+                for (BasicBlock block : listConnected) {
+                    if (block == startBlock) {
+                        continue;
+                    }
+                    double x = position.getX() + width / 2 + blocksDistance + block.getGeometry().getWidth() / 2;
+                    position.setX(x);
+                    moveBlock(block, position, graph);
+                    width = block.getGeometry().getWidth();
+                }
+                break;
+            case TREE:
+                break;
+            case REVTREE:
+                break;
+            case CYCLED:
+                break;
+            case OTHER:
+                break;
+        }
+    }
+
+    /**
+     * Check the type of the connected blocks.
+     *
+     * @param listConnected
+     *            the list of the connected blocks
+     * @return
+     */
+    private static ConnectType checkConnectType(List<BasicBlock> listConnected) {
+        // if every block has 0/1 IN connected block in the list and 0/1 OUT connected block in the list,
+        int i = 0;
+        for (; i < listConnected.size(); i++) {
+            BasicBlock block = listConnected.get(i);
+            List<BasicBlock> listIn = getConnectedBlocksInOut(block, PortType.IN);
+            int numIn = 0;
+            for (BasicBlock b : listIn) {
+                if (listConnected.contains(b)) {
+                    numIn++;
+                }
+            }
+            if (numIn > 1) {
+                break;
+            }
+            List<BasicBlock> listOut = getConnectedBlocksInOut(block, PortType.OUT);
+            int numOut = 0;
+            for (BasicBlock b : listOut) {
+                if (listConnected.contains(b)) {
+                    numOut++;
+                }
+            }
+            if (numOut > 1) {
+                break;
+            }
+        }
+        if (i == listConnected.size()) {
+            return ConnectType.FLAT;
+        }
+        return ConnectType.OTHER;
+    }
+
+    /**
+     * Choose a start block from the list.
+     * <ol>
+     * <li>If it is a out block,</li>
+     * <li>If it is an explicit block and there are no blocks in the list which is its parent,</li>
+     * <li>If it contains a Command/Control port and there are no blocks in the list which is its parent,</li>
+     * </ol>
+     *
+     * @param listConnected
+     *            list of blocks
+     * @return
+     */
+    private static BasicBlock chooseStartBlock(List<BasicBlock> listConnected) {
+        for (BasicBlock block : listConnected) {
+            if (isOutBlock(block)) {
+                return block;
+            } else if (isExplicitBlock(block) || containCommandControlPort(block)) {
+                List<BasicBlock> listIn = getConnectedBlocksInOut(block, PortType.IN);
+                int numIn = 0;
+                for (BasicBlock b : listIn) {
+                    if (listConnected.contains(b)) {
+                        numIn++;
+                    }
+                }
+                if (numIn == 0) {
+                    return block;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isStartBlock(BasicBlock block, List<BasicBlock> listBlocks) {
+        List<BasicBlock> listChildren = getConnectedBlocks(block, null);
+        for (BasicBlock child: listChildren) {
+            return true;
+        }
+        return false;
+    }
+
+    private static int getDepth(List<BasicBlock> listConnected) {
+        return 0;
+    }
+
+    /**
+     * Get the directly connected blocks.
+     *
+     * @param basicblock
+     *            the basic block
+     * @param exclusion
+     *            the exclusion block
+     * @return
+     */
+    private static List<BasicBlock> getConnectedBlocks(BasicBlock basicblock, BasicBlock exclusion) {
+        List<BasicBlock> list = new ArrayList<>(0);
+        for (int i = 0; i < basicblock.getChildCount(); i++) {
+            mxICell port = basicblock.getChildAt(i);
+            if (port instanceof BasicPort) {
+                BasicBlock other = getConnectedBlock(basicblock, (BasicPort) port);
+                if (other == exclusion) {
+                    continue;
+                }
+                list.add(other);
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Get all IN/OUT directly connected blocks.
+     *
+     * @param basicblock
+     *            the basic block
+     * @param type
+     *            IN or OUT
+     * @return
+     */
+    private static List<BasicBlock> getConnectedBlocksInOut(BasicBlock basicblock, PortType type) {
+        List<BasicBlock> list = new ArrayList<>(0);
+        switch (type) {
+            case IN:
+                for (int i = 0; i < basicblock.getChildCount(); i++) {
+                    mxICell port = basicblock.getChildAt(i);
+                    if ((port instanceof InputPort) || (port instanceof ControlPort)) {
+                        list.add(getConnectedBlock(basicblock, (BasicPort) port));
+                    }
+                }
+                break;
+            case OUT:
+                for (int i = 0; i < basicblock.getChildCount(); i++) {
+                    mxICell port = basicblock.getChildAt(i);
+                    if ((port instanceof OutputPort) || (port instanceof CommandPort)) {
+                        list.add(getConnectedBlock(basicblock, (BasicPort) port));
+                    }
+                }
+                break;
+        }
+        return list;
+    }
+
+    /**
+     * Move the block to the new position (the position is the center point of the block).
+     *
+     * @param basicblock
+     *            the basic block
+     * @param newPosition
+     *            the new position
+     * @param graph
+     */
+    private static void moveBlock(BasicBlock basicblock, mxPoint newPosition, XcosDiagram graph) {
+        mxGeometry blockGeo = (mxGeometry) basicblock.getGeometry().clone();
+        blockGeo.setX(newPosition.getX() - blockGeo.getWidth() / 2);
+        blockGeo.setY(newPosition.getY() - blockGeo.getHeight() / 2);
+        graph.getModel().setGeometry(basicblock, blockGeo);
+    }
+
+    /**
+     * Change the position of the block.
+     * <ol>
+     * <li>Move to right if blocks are too closed horizontally.</li>
+     * <li>Move downwards if blocks are too closed vertically.</li>
      * </ol>
      *
      * @param basicblock
@@ -349,7 +612,6 @@ public abstract class NormalBlockAutoPositionUtils {
      * @param graph
      */
     private static void changeNonstartBlockPosition(BasicBlock basicblock, Object[] all, XcosDiagram graph) {
-        // TODO:
         List<BasicBlock> listBlocks = new ArrayList<>(0);
         for (Object o : all) {
             if (isNormalBlock(o) && o != basicblock) {
@@ -364,24 +626,51 @@ public abstract class NormalBlockAutoPositionUtils {
                 continue;
             }
             BasicBlock block = listBlocks.get(i);
-            if (isBlocksClosed(basicblock, block)) {
+            if (isBlocksSuperimposition(basicblock, block)) {
+                List<BasicBlock> listRight = getAllRightBlocks(basicblock, listBlocks);
+                blocksDistance = blocksDistance(block, basicblock, Orientation.WEST);
+                moveBlock(basicblock, blocksDistance, Orientation.EAST, graph);
+                moveBlocks(listRight, blocksDistance, Orientation.EAST, graph);
+            } else if (isBlocksSuperimposition(block, basicblock)) {
+                List<BasicBlock> listBlockRight = getAllRightBlocks(block, listBlocks);
+                blocksDistance = blocksDistance(basicblock, block, Orientation.EAST);
+                moveBlock(block, blocksDistance, Orientation.EAST, graph);
+                moveBlocks(listBlockRight, blocksDistance, Orientation.EAST, graph);
+            } else if (isBlocksClosed(basicblock, block)) {
                 Orientation position = blockOrientation(basicblock, block);
                 switch (position) {
-                    case WEST: // if the closed block is on the left of the basicblock, move the basicblock to right
-                        List<BasicBlock> listRight = getAllRightBlocks(basicblock, listBlocks);
-                        moveBlock(basicblock, blocksDistance, Orientation.EAST, graph);
-                        moveBlocks(listRight, blocksDistance, Orientation.EAST, graph);
+                    case WEST: // Left: if the closed block is on the left of the basicblock, move the basicblock to right
+                        if (hasPortOrientation(block, Orientation.EAST) || hasPortOrientation(basicblock, Orientation.WEST)) {
+                            // if they have ports in this direction,
+                            List<BasicBlock> listRight = getAllRightBlocks(basicblock, listBlocks);
+                            blocksDistance = blocksDistance(block, basicblock, position);
+                            moveBlock(basicblock, blocksDistance, Orientation.EAST, graph);
+                            moveBlocks(listRight, blocksDistance, Orientation.EAST, graph);
+                        }
                         break;
-                    case NORTH: // up
-                        // do nothing for vertical position.
+                    case NORTH: // Up: if the closed block is above the basicblock, move the basicblock downwards
+                        if (hasPortOrientation(block, Orientation.SOUTH) || hasPortOrientation(basicblock, Orientation.NORTH)) {
+                            List<BasicBlock> listDown = getAllDownBlocks(basicblock, listBlocks);
+                            blocksDistance = blocksDistance(block, basicblock, position);
+                            moveBlock(basicblock, blocksDistance, Orientation.SOUTH, graph);
+                            moveBlocks(listDown, blocksDistance, Orientation.SOUTH, graph);
+                        }
                         break;
-                    case EAST: // if the closed block is on the right of the basicblock, move the block to right
-                        List<BasicBlock> listBlockRight = getAllRightBlocks(block, listBlocks);
-                        moveBlock(block, blocksDistance, Orientation.EAST, graph);
-                        moveBlocks(listBlockRight, blocksDistance, Orientation.EAST, graph);
+                    case EAST: // Right: if the closed block is on the right of the basicblock, move the block to right
+                        if (hasPortOrientation(block, Orientation.WEST) || hasPortOrientation(basicblock, Orientation.EAST)) {
+                            List<BasicBlock> listBlockRight = getAllRightBlocks(block, listBlocks);
+                            blocksDistance = blocksDistance(basicblock, block, position);
+                            moveBlock(block, blocksDistance, Orientation.EAST, graph);
+                            moveBlocks(listBlockRight, blocksDistance, Orientation.EAST, graph);
+                        }
                         break;
-                    case SOUTH: // down
-                        // do nothing for vertical position.
+                    case SOUTH: // Down: if the closed block is under the basicblock, move the block downwards
+                        if (hasPortOrientation(block, Orientation.NORTH) || hasPortOrientation(basicblock, Orientation.SOUTH)) {
+                            List<BasicBlock> listDown = getAllDownBlocks(block, listBlocks);
+                            blocksDistance = blocksDistance(basicblock, block, position);
+                            moveBlock(block, blocksDistance, Orientation.SOUTH, graph);
+                            moveBlocks(listDown, blocksDistance, Orientation.SOUTH, graph);
+                        }
                         break;
                 }
             }
@@ -404,7 +693,31 @@ public abstract class NormalBlockAutoPositionUtils {
             if (isNormalBlock(o) && basicblock != o) {
                 BasicBlock block = (BasicBlock) o;
                 mxGeometry geometry2 = block.getGeometry();
-                if (geometry2.getCenterX() > geometry.getCenterX()) {
+                if (geometry2.getX() > geometry.getX()) {
+                    listRight.add(block);
+                }
+            }
+        }
+        return listRight;
+    }
+
+    /**
+     * Get all blocks which are under the basicblock.
+     *
+     * @param basicblock
+     *            the block
+     * @param listBlocks
+     *            all normal blocks
+     * @return
+     */
+    private static List<BasicBlock> getAllDownBlocks(BasicBlock basicblock, List<BasicBlock> listBlocks) {
+        mxGeometry geometry = basicblock.getGeometry();
+        List<BasicBlock> listRight = new ArrayList<>(0);
+        for (Object o : listBlocks) {
+            if (isNormalBlock(o) && basicblock != o) {
+                BasicBlock block = (BasicBlock) o;
+                mxGeometry geometry2 = block.getGeometry();
+                if (geometry2.getY() > geometry.getY()) {
                     listRight.add(block);
                 }
             }
@@ -441,15 +754,73 @@ public abstract class NormalBlockAutoPositionUtils {
 
         for (int i = 0; i < points1.length; i++) {
             for (int j = 0; j < points2.length; j++) {
-                // if any two of these points are too closed.
-                if (Math.abs(points1[i].getX() - points2[j].getX()) <= blocksDistance
-                        && Math.abs(points1[i].getY() - points2[j].getY()) <= blocksDistance) {
+                double x1 = points1[i].getX();
+                double x2 = points2[j].getX();
+                double y1 = points1[i].getY();
+                double y2 = points2[j].getY();
+                if (Math.abs(x1 - x2) <= blocksDistance && Math.abs(y1 - y2) <= blocksDistance) {
+                    // if any two of these points are too closed,
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * Check if two blocks are superimposition and the left 2 vertices of the first block are inside the second one.
+     *
+     * @param block1
+     *            the first block
+     * @param block2
+     *            the second block
+     * @return
+     */
+    private static boolean isBlocksSuperimposition(BasicBlock block1, BasicBlock block2) {
+        // get the left 2 vertices of the first block
+        mxPoint[] points1 = new mxPoint[2];
+        mxGeometry geo1 = block1.getGeometry();
+        points1[0] = new mxPoint(geo1.getX(), geo1.getY());
+        points1[1] = new mxPoint(geo1.getX(), geo1.getY() + geo1.getHeight());
+
+        for (int i = 0; i < points1.length; i++) {
+            if (XcosRouteUtils.checkPointInBlock(points1[i].getX(), points1[i].getY(), block2, true)) {
+                // if any point is in the other block,
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Calculate the distance the block should be moved according to the relative distance between it and blockBase.
+     *
+     * @param blockBase
+     *            the base block
+     * @param block
+     *            the block
+     * @param orientation
+     *            relative position of block to blockBase
+     * @return the distance
+     */
+    private static int blocksDistance(BasicBlock blockBase, BasicBlock block, Orientation orientation) {
+        int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
+                : XcosOptions.getEdition().getGraphBlockDistance();
+        mxGeometry geoBase = blockBase.getGeometry();
+        mxGeometry geoBlock = block.getGeometry();
+        double xBase = geoBase.getX();
+        double yBase = geoBase.getY();
+        double xBlock = geoBlock.getX();
+        double yBlock = geoBlock.getY();
+        if (orientation == Orientation.EAST || orientation == Orientation.WEST) {
+            xBase += geoBase.getWidth();
+            blocksDistance -= (xBlock - xBase);
+        } else {
+            yBase += geoBase.getHeight();
+            blocksDistance -= (yBlock - yBase);
+        }
+        return blocksDistance;
     }
 
     /**
@@ -470,10 +841,10 @@ public abstract class NormalBlockAutoPositionUtils {
     private static Orientation blockOrientation(BasicBlock blockBase, BasicBlock block) {
         mxGeometry geoBase = blockBase.getGeometry();
         mxGeometry geoBlock = block.getGeometry();
-        double xBase = geoBase.getCenterX();
-        double yBase = geoBase.getCenterY();
-        double xBlock = geoBlock.getCenterX();
-        double yBlock = geoBlock.getCenterY();
+        double xBase = geoBase.getX();
+        double yBase = geoBase.getY();
+        double xBlock = geoBlock.getX();
+        double yBlock = geoBlock.getY();
         double x = xBlock - xBase;
         double y = yBlock - yBase;
 
@@ -897,7 +1268,7 @@ public abstract class NormalBlockAutoPositionUtils {
         // if two ports are unable to be opposite.
         Orientation orientation1 = XcosRouteUtils.getPortOrientation(port);
         Orientation orientation2 = XcosRouteUtils.getPortOrientation(otherPort);
-        if (!XcosRouteUtils.isOrientationParallel(orientation1, orientation2)) {
+        if (!XcosRouteUtils.isOrientationOpposite(orientation1, orientation2)) {
             return;
         }
 
@@ -1108,13 +1479,35 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
+     * Check if the block has a port in its certain Orientation.
+     *
+     * @param block
+     *            the basic block
+     * @param orientation
+     *            the corresponded orientation
+     * @return <b>TRUE</b> if it has
+     */
+    private static boolean hasPortOrientation(BasicBlock block, Orientation orientation) {
+        for (int i = 0; i < block.getChildCount(); i++) {
+            mxICell child = block.getChildAt(i);
+            if (child instanceof BasicPort) {
+                BasicPort port = (BasicPort) child;
+                if (XcosRouteUtils.getPortOrientation(port) == orientation) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Check whether there are blocks in the block.
      *
      * @param block
      *            the block
      * @param allObstacles
      *            all the obstacles
-     * @return <b>true</b> if there is at least one block(s) in the block.
+     * @return <b>TRUE</b> if there is at least one block(s) in the block.
      */
     protected static boolean checkObstacles(BasicBlock block, Object[] allObstacles) {
         mxGeometry geometry = block.getGeometry();

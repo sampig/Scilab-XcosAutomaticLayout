@@ -221,59 +221,82 @@ public abstract class XcosRouteUtils {
     }
 
     /**
-     * Check whether a point is in the range of one block (including the ports).
+     * Check whether the point is in the range of one block (including the ports).
      *
      * @param x
      *            the x-coordinate of the point
      * @param y
      *            the y-coordinate of the point
      * @param allCells
-     * @return <b>true</b> if one point is in one block.
+     *            all blocks
+     * @return <b>true</b> if the point is in one of the blocks.
      */
     protected static boolean checkPointInBlocks(double x, double y, Object[] allCells) {
         for (Object o : allCells) {
             if (o instanceof BasicBlock) {
                 BasicBlock block = (BasicBlock) o;
-                // if it is a BasicBlock, re-calculate its size with its port.
-                double ix = 0;
-                double iy = 0;
-                double iw = 0;
-                double ih = 0;
-                mxGeometry g = block.getGeometry();
-                for (int i = 0; i < block.getChildCount(); i++) {
-                    mxICell child = block.getChildAt(i);
-                    if (child.getGeometry() == null) {
-                        continue;
-                    }
-                    mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry().getY(),
-                            child.getGeometry().getWidth(), child.getGeometry().getHeight());
-                    if (child.getGeometry().isRelative()) {
-                        childGeo.setX(g.getWidth() * childGeo.getX());
-                        childGeo.setY(g.getHeight() * childGeo.getY());
-                    }
-                    if (childGeo.getX() < 0) {
-                        ix = childGeo.getX();
-                        iw = Math.abs(ix);
-                    }
-                    if (childGeo.getX() + childGeo.getWidth() > g.getWidth()) {
-                        iw += childGeo.getX() + childGeo.getWidth() - g.getWidth();
-                    }
-                    if (childGeo.getY() < 0) {
-                        iy = childGeo.getY();
-                        ih = Math.abs(iy);
-                    }
-                    if (childGeo.getY() + childGeo.getHeight() > Math.max(block.getGeometry().getHeight(), ih)) {
-                        ih += childGeo.getY() + childGeo.getHeight() - g.getHeight();
-                    }
-                }
-                double blockx = g.getX() + ix;
-                double blocky = g.getY() + iy;
-                double width = g.getWidth() + iw;
-                double height = g.getHeight() + ih;
-                if (x >= blockx && x <= (blockx + width) && y >= blocky && y <= (blocky + height)) {
+                if (checkPointInBlock(x, y, block, true)) {
                     return true;
                 }
             }
+        }
+        return false;
+    }
+
+    /**
+     * Check whether the point is in the block.
+     *
+     * @param x
+     *            the x-coordinate of the point
+     * @param y
+     *            the y-coordinate of the point
+     * @param block
+     *            the block
+     * @param includePorts
+     *            true if including ports
+     * @return <b>true</b> if the point is in the block.
+     */
+    protected static boolean checkPointInBlock(double x, double y, BasicBlock block, boolean includePorts) {
+        double ix = 0;
+        double iy = 0;
+        double iw = 0;
+        double ih = 0;
+        mxGeometry g = block.getGeometry();
+        if(includePorts) {
+            // if it is a BasicBlock, re-calculate its size with its port.
+            for (int i = 0; i < block.getChildCount(); i++) {
+                mxICell child = block.getChildAt(i);
+                if (child.getGeometry() == null) {
+                    continue;
+                }
+                mxGeometry childGeo = new mxGeometry(child.getGeometry().getX(), child.getGeometry().getY(),
+                        child.getGeometry().getWidth(), child.getGeometry().getHeight());
+                if (child.getGeometry().isRelative()) {
+                    childGeo.setX(g.getWidth() * childGeo.getX());
+                    childGeo.setY(g.getHeight() * childGeo.getY());
+                }
+                if (childGeo.getX() < 0) {
+                    ix = childGeo.getX();
+                    iw = Math.abs(ix);
+                }
+                if (childGeo.getX() + childGeo.getWidth() > g.getWidth()) {
+                    iw += childGeo.getX() + childGeo.getWidth() - g.getWidth();
+                }
+                if (childGeo.getY() < 0) {
+                    iy = childGeo.getY();
+                    ih = Math.abs(iy);
+                }
+                if (childGeo.getY() + childGeo.getHeight() > Math.max(block.getGeometry().getHeight(), ih)) {
+                    ih += childGeo.getY() + childGeo.getHeight() - g.getHeight();
+                }
+            }
+        }
+        double blockx = g.getX() + ix;
+        double blocky = g.getY() + iy;
+        double width = g.getWidth() + iw;
+        double height = g.getHeight() + ih;
+        if (x >= blockx && x <= (blockx + width) && y >= blocky && y <= (blocky + height)) {
+            return true;
         }
         return false;
     }
@@ -1086,7 +1109,7 @@ public abstract class XcosRouteUtils {
      * @param orientation2
      * @return
      */
-    protected static boolean isOrientationParallel(Orientation orientation1, Orientation orientation2) {
+    protected static boolean isOrientationOpposite(Orientation orientation1, Orientation orientation2) {
         if (orientation1 == Orientation.EAST && orientation2 == Orientation.WEST) {
             return true;
         }

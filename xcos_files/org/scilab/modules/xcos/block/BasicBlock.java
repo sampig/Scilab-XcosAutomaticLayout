@@ -789,7 +789,7 @@ public class BasicBlock extends XcosCell implements Serializable {
         ((SwingScilabContextMenu) menu.getAsSimpleContextMenu()).setLocation(MouseInfo.getPointerInfo().getLocation().x,
                 MouseInfo.getPointerInfo().getLocation().y);
 
-        customizeMenu(menuList);
+        customizeMenu(menuList, graph);
 
         return menu;
     }
@@ -800,10 +800,29 @@ public class BasicBlock extends XcosCell implements Serializable {
      * @param menuList
      *            list of menu
      */
-    protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList) {
+    protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList, ScilabGraph graph) {
+        boolean flagNormal = false;
+        boolean flagSplit = false;
         // To be overridden by sub-classes
         if (!(this instanceof SplitBlock)) {
             menuList.get(AutoPositionNormalBlockAction.class).setEnabled(true);
+            flagNormal = true;
+        }
+        // TODO: is it necessary? every time it will check all selections until finding both.
+        if (graph != null) {
+            Object[] selections = graph.getSelectionCells();
+            for (Object obj: selections) {
+                if (obj instanceof SplitBlock) {
+                    menuList.get(AutoPositionSplitBlockAction.class).setEnabled(true);
+                    flagSplit = true;
+                } else {
+                    menuList.get(AutoPositionNormalBlockAction.class).setEnabled(true);
+                    flagNormal = true;
+                }
+                if (flagSplit && flagNormal) {
+                    break;
+                }
+            }
         }
     }
 

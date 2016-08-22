@@ -23,6 +23,7 @@ import org.scilab.modules.xcos.port.BasicPort;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxICell;
 
+import org.scilab.modules.graph.ScilabGraph;
 import org.scilab.modules.graph.actions.base.DefaultAction;
 import org.scilab.modules.gui.menu.Menu;
 import org.scilab.modules.xcos.JavaController;
@@ -50,7 +51,7 @@ public final class SplitBlock extends BasicBlock {
      * Set the "BAP - Split Block" menu enabled.
      */
     @Override
-    protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList) {
+    protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList, ScilabGraph graph) {
         menuList.get(AutoPositionSplitBlockAction.class).setEnabled(true);
     }
 
