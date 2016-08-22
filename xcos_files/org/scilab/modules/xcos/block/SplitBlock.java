@@ -52,6 +52,7 @@ public final class SplitBlock extends BasicBlock {
      */
     @Override
     protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList, ScilabGraph graph) {
+        super.customizeMenu(menuList, graph);
         menuList.get(AutoPositionSplitBlockAction.class).setEnabled(true);
     }
 

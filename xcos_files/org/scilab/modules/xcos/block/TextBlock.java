@@ -20,6 +20,7 @@ package org.scilab.modules.xcos.block;
 import com.mxgraph.model.mxGeometry;
 import java.util.Map;
 
+import org.scilab.modules.graph.ScilabGraph;
 import org.scilab.modules.graph.actions.base.DefaultAction;
 import org.scilab.modules.gui.menu.Menu;
 import org.scilab.modules.xcos.JavaController;
@@ -46,7 +47,7 @@ public final class TextBlock extends BasicBlock {
      *            the menuList to work on
      */
     @Override
-    protected void customizeMenu(Map < Class <? extends DefaultAction > , Menu > menuList) {
+    protected void customizeMenu(Map < Class <? extends DefaultAction > , Menu > menuList, ScilabGraph graph) {
         menuList.get(BlockParametersAction.class).setEnabled(false);
         menuList.get(RegionToSuperblockAction.class).setEnabled(false);
     }

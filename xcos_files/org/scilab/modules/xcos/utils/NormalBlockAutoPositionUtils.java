@@ -244,7 +244,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param cell
      *            the cell
-     * @return <b>TRUE</b> if it is a normal block
+     * @return <b>true</b> if it is a normal block
      */
     private static boolean isNormalBlock(Object cell) {
         if (cell instanceof BasicBlock && !(cell instanceof SplitBlock) && !(cell instanceof TextBlock)) {
@@ -258,7 +258,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param basicblock
      *            the block
-     * @return <b>TRUE</b> if it is a start block
+     * @return <b>true</b> if it is a start block
      */
     private static boolean isStartBlock(BasicBlock basicblock) {
         if (isOutBlock(basicblock) && getOutPortNum(basicblock) == 1) {
@@ -272,7 +272,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param basicblock
      *            the block
-     * @return <b>TRUE</b> if it is an end block
+     * @return <b>true</b> if it is an end block
      */
     private static boolean isEndBlock(BasicBlock basicblock) {
         if (isInBlock(basicblock) && getInPortNum(basicblock) == 1) {
@@ -286,7 +286,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param block
      *            the block
-     * @return <b>TRUE</b> if it has only output
+     * @return <b>true</b> if it has only output
      */
     private static boolean isOutBlock(BasicBlock block) {
         if (getOutPortNum(block) > 0 && getInPortNum(block) == 0) {
@@ -300,7 +300,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param block
      *            the block
-     * @return <b>TRUE</b> if it has only input
+     * @return <b>true</b> if it has only input
      */
     private static boolean isInBlock(BasicBlock block) {
         if (getInPortNum(block) > 0 && getOutPortNum(block) == 0) {
@@ -314,7 +314,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param basicblock
      *            the basic block
-     * @return <b>TRUE</b> if it does NOT contain any
+     * @return <b>true</b> if it does NOT contain any
      */
     private static boolean isExplicitBlock(BasicBlock basicblock) {
         if (containCommandControlPort(basicblock) || containImplicitPort(basicblock)) {
@@ -328,7 +328,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param basicblock
      *            the basic block
-     * @return <b>TRUE</b> if it contains
+     * @return <b>true</b> if it contains
      */
     private static boolean containCommandControlPort(BasicBlock basicblock) {
         for (int i = 0; i < basicblock.getChildCount(); i++) {
@@ -345,7 +345,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param basicblock
      *            the basic block
-     * @return <b>TRUE</b> if it contains
+     * @return <b>true</b> if it contains
      */
     private static boolean containImplicitPort(BasicBlock basicblock) {
         for (int i = 0; i < basicblock.getChildCount(); i++) {
@@ -939,7 +939,7 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
-     * Get all the blocks which connects to same block.
+     * Get all the blocks which connects to same block group by the same target.
      *
      * @param blocks
      *            the blocks
@@ -1364,7 +1364,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *            the first port
      * @param port2
      *            the second port
-     * @return <b>TRUE</b> if two ports are opposite and aligned
+     * @return <b>true</b> if two ports are opposite and aligned
      */
     private static boolean isPortsOpposite(BasicPort port1, BasicPort port2) {
         mxPoint point1 = BlockAutoPositionUtils.getPortPosition(port1);
@@ -1425,7 +1425,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *            the first block
      * @param block2
      *            the second block
-     * @return <b>TRUE</b> if two blocks are contected
+     * @return <b>true</b> if two blocks are contected
      */
     private static boolean isBlocksConnected(BasicBlock block1, BasicBlock block2) {
         for (int i = 0; i < block1.getChildCount(); i++) {
@@ -1479,13 +1479,13 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
-     * Check if the block has a port in its certain Orientation.
+     * Check if the block has a port in a given Orientation.
      *
      * @param block
      *            the basic block
      * @param orientation
      *            the corresponded orientation
-     * @return <b>TRUE</b> if it has
+     * @return <b>true</b> if it has
      */
     private static boolean hasPortOrientation(BasicBlock block, Orientation orientation) {
         for (int i = 0; i < block.getChildCount(); i++) {
@@ -1507,7 +1507,7 @@ public abstract class NormalBlockAutoPositionUtils {
      *            the block
      * @param allObstacles
      *            all the obstacles
-     * @return <b>TRUE</b> if there is at least one block(s) in the block.
+     * @return <b>true</b> if there is at least one block(s) in the block.
      */
     protected static boolean checkObstacles(BasicBlock block, Object[] allObstacles) {
         mxGeometry geometry = block.getGeometry();

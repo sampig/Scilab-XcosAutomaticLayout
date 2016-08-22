@@ -801,14 +801,18 @@ public class BasicBlock extends XcosCell implements Serializable {
      *            list of menu
      */
     protected void customizeMenu(Map<Class<? extends DefaultAction>, Menu> menuList, ScilabGraph graph) {
+        // To be overridden by sub-classes
+
         boolean flagNormal = false;
         boolean flagSplit = false;
-        // To be overridden by sub-classes
         if (!(this instanceof SplitBlock)) {
             menuList.get(AutoPositionNormalBlockAction.class).setEnabled(true);
             flagNormal = true;
         }
-        // TODO: is it necessary? every time it will check all selections until finding both.
+        // TODO: is it necessary? every time it will check all selections until finding both. (adding a new parameter.)
+        // check other selections.
+        // if a normal block is selected, enable AutoPositionNormalBlockAction.
+        // if a split block is selected, enable AutoPositionSplitBlockAction.
         if (graph != null) {
             Object[] selections = graph.getSelectionCells();
             for (Object obj: selections) {
@@ -819,6 +823,7 @@ public class BasicBlock extends XcosCell implements Serializable {
                     menuList.get(AutoPositionNormalBlockAction.class).setEnabled(true);
                     flagNormal = true;
                 }
+                // when both are enabled, it is unnecessary to check the rest.
                 if (flagSplit && flagNormal) {
                     break;
                 }
