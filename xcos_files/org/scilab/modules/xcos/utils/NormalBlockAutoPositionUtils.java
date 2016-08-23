@@ -412,8 +412,8 @@ public abstract class NormalBlockAutoPositionUtils {
         // TODO: should consider SplitBlock.
         int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
                 : XcosOptions.getEdition().getGraphBlockDistance();
-        BasicBlock startBlock = chooseStartBlock(listConnected);
         ConnectType connectType = checkConnectType(listConnected);
+        BasicBlock startBlock = chooseStartBlock(listConnected, connectType);
         switch (connectType) {
             case FLAT: // Hierarchical Flat connection
                 changeNonstartBlockPosition(startBlock, all, graph);
@@ -453,10 +453,23 @@ public abstract class NormalBlockAutoPositionUtils {
                 }
                 break;
             case TREE:
+                List<BasicBlock> listTree = reorderTreeBlocks(listConnected, startBlock, false);
+                changeNonstartBlockPosition(startBlock, all, graph);
+                moveChildrenBlocks(listTree, startBlock, graph);
+                List<BasicBlock> listMoved = new ArrayList<>(0);
+                listMoved.add(startBlock);
+                for (int i = 0; i < listConnected.size(); i++) {
+                    BasicBlock block = listConnected.get(i);
+                    if (!listMoved.contains(block)) {
+                        listMoved.add(block);
+                    }
+                }
                 break;
             case REVTREE:
+                // TODO: deal with a reversed tree.
                 break;
             case CYCLED:
+                // TODO: deal with a cycled.
                 break;
             case OTHER:
                 break;
@@ -505,6 +518,8 @@ public abstract class NormalBlockAutoPositionUtils {
         if (i == listConnected.size()) {
             return ConnectType.FLAT;
         }
+
+        // if every block has no more than 1 IN and has any OUT,
         for (i = 0; i < listConnected.size(); i++) {
             BasicBlock block = listConnected.get(i);
             List<BasicBlock> listIn = getConnectedBlocksInOut(block, PortType.IN);
@@ -521,6 +536,40 @@ public abstract class NormalBlockAutoPositionUtils {
         if (i == listConnected.size()) {
             return ConnectType.TREE;
         }
+
+        // if every block has no more than 1 OUT and has any IN,
+        for (i = 0; i < listConnected.size(); i++) {
+            BasicBlock block = listConnected.get(i);
+            List<BasicBlock> listOut = getConnectedBlocksInOut(block, PortType.OUT);
+            int numOut = 0;
+            for (BasicBlock b : listOut) {
+                if (listConnected.contains(b)) {
+                    numOut++;
+                }
+            }
+            if (numOut > 1) {
+                break;
+            }
+        }
+        if (i == listConnected.size()) {
+            return ConnectType.REVTREE;
+        }
+
+        // if a block has 2 connected blocks in the list,
+        for (i = 0; i < listConnected.size(); i++) {
+            BasicBlock block = listConnected.get(i);
+            List<BasicBlock> listOut = getConnectedBlocks(block, null);
+            int numConnected = 0;
+            for (BasicBlock b : listOut) {
+                if (listConnected.contains(b)) {
+                    numConnected++;
+                }
+            }
+            if (numConnected > 1) {
+                return ConnectType.CYCLED;
+            }
+        }
+
         return ConnectType.OTHER;
     }
 
@@ -534,26 +583,43 @@ public abstract class NormalBlockAutoPositionUtils {
      *
      * @param listConnected
      *            list of blocks
+     * @param type
+     *            type of connections
      * @return
      */
-    private static BasicBlock chooseStartBlock(List<BasicBlock> listConnected) {
+    private static BasicBlock chooseStartBlock(List<BasicBlock> listConnected, ConnectType type) {
         BasicBlock left = null;
         for (BasicBlock block : listConnected) {
             if (isOutBlock(block)) {
                 return block;
             } else if (isExplicitBlock(block) || containCommandControlPort(block)) {
+                if (type == ConnectType.REVTREE) { // if it is a reversed tree, the start block is the one without out.
+                    List<BasicBlock> listOut = getConnectedBlocksInOut(block, PortType.OUT);
+                    int numOut = 0;
+                    for (BasicBlock b : listOut) {
+                        if (listConnected.contains(b)) {
+                            numOut++;
+                            break;
+                        }
+                    }
+                    if (numOut == 0) {
+                        return block;
+                    }
+                }
+                // if it is flat or a tree, the start block is the one without in
                 List<BasicBlock> listIn = getConnectedBlocksInOut(block, PortType.IN);
                 int numIn = 0;
                 for (BasicBlock b : listIn) {
                     if (listConnected.contains(b)) {
                         numIn++;
+                        break;
                     }
                 }
                 if (numIn == 0) {
                     return block;
                 }
             }
-            // choose the one on the most left
+            // otherwise, choose the one on the most left
             if (left == null || left.getGeometry().getX() > block.getGeometry().getX()) {
                 left = block;
             }
@@ -562,7 +628,8 @@ public abstract class NormalBlockAutoPositionUtils {
     }
 
     /**
-     * Reorder the list of blocks from the start block.
+     * Reorder the list of blocks from the start block.<br/>
+     * The order is the sequence.
      *
      * @param list
      *            the list of blocks
@@ -591,19 +658,6 @@ public abstract class NormalBlockAutoPositionUtils {
             }
         }
     }
-
-    private static boolean isStartBlock(BasicBlock block, List<BasicBlock> listBlocks) {
-        List<BasicBlock> listChildren = getConnectedBlocks(block, null);
-        for (BasicBlock child: listChildren) {
-            return true;
-        }
-        return false;
-    }
-
-    private static int getDepth(List<BasicBlock> listConnected) {
-        return 0;
-    }
-
     /**
      * Get the directly connected blocks.
      *
@@ -658,6 +712,285 @@ public abstract class NormalBlockAutoPositionUtils {
                 break;
         }
         return list;
+    }
+
+    /**
+     * In a tree, get the children of the block.
+     *
+     * @param listTree
+     *            the list of tree
+     * @param block
+     *            the block
+     * @return
+     */
+    private static List<BasicBlock> getTreeBlockChildren(List<BasicBlock> listTree, BasicBlock block) {
+        // get the children in the tree
+        List<BasicBlock> listChildren = new ArrayList<>(0);
+        List<BasicBlock> listOut = getConnectedBlocksInOut(block, PortType.OUT);
+        for (BasicBlock b : listOut) {
+            if (listTree.contains(b)) {
+                listChildren.add(b);
+            }
+        }
+
+        // if there are no children,
+        if (listChildren.size() == 0) {
+            return listChildren;
+        }
+
+        // reorder the children according to the ports they connect to.
+        List<BasicPort> listPorts = new ArrayList<>(0);
+        List<mxPoint> listPoints = new ArrayList<>(0);
+        for (BasicBlock b : listChildren) {
+            BasicPort port = getSelfPort(block, b);
+            listPorts.add(port);
+            listPoints.add(BlockAutoPositionUtils.getPortPosition(port));
+        }
+
+        // get the orientation of most ports.
+        Orientation orien = Orientation.EAST;
+        int[] countOrien = new int[4];
+        for (BasicPort p: listPorts) {
+            switch(XcosRouteUtils.getPortOrientation(p)) {
+                case EAST:
+                    countOrien[0]++;
+                    break;
+                case WEST:
+                    countOrien[1]++;
+                    break;
+                case SOUTH:
+                    countOrien[2]++;
+                    break;
+                case NORTH:
+                    countOrien[3]++;
+                    break;
+            }
+        }
+        int count = 0;
+        for (int i = 1; i < countOrien.length; i++) {
+            if (countOrien[count] < countOrien[i]) {
+                count = i;
+            }
+        }
+        switch(count) {
+            case 0:
+                orien = Orientation.EAST;
+                break;
+            case 1:
+                orien = Orientation.WEST;
+                break;
+            case 2:
+                orien = Orientation.SOUTH;
+                break;
+            case 3:
+                orien = Orientation.NORTH;
+                break;
+            default:
+                orien = Orientation.EAST;
+                break;
+        }
+
+        // change the order of the blocks according to the positions of the ports which they connect to.
+        BasicBlock tmpBlock;
+        mxPoint tmpPoint;
+        for (int i = 0; i < listChildren.size() - 1; i++) {
+            for (int j = listChildren.size() - 1; j > i; j--) {
+                mxPoint p1 = listPoints.get(j - 1);
+                mxPoint p2 = listPoints.get(j);
+                if (((orien == Orientation.EAST || orien == Orientation.WEST) && p1.getY() > p2.getY())
+                        || ((orien == Orientation.SOUTH || orien == Orientation.NORTH) && p1.getX() > p2.getX())) {
+                    tmpBlock = listChildren.get(j);
+                    listChildren.set(j, listChildren.get(j - 1));
+                    listChildren.set(j - 1, tmpBlock);
+                    tmpPoint = listPoints.get(j);
+                    listPoints.set(j, listPoints.get(j - 1));
+                    listPoints.set(j - 1, tmpPoint);
+                }
+            }
+        }
+        return listChildren;
+    }
+
+    /**
+     * Reorder the list of blocks from the center block (included).<br/>
+     * The order is DLR.
+     *
+     * @param listConnected
+     *            the list of blocks
+     * @param center
+     *            the center block
+     * @param reversed
+     *            true if it is a reversed tree
+     */
+    private static List<BasicBlock> reorderTreeBlocks(List<BasicBlock> listConnected, BasicBlock center, boolean reversed) {
+        List<BasicBlock> tree = new ArrayList<>(0);
+        tree.add(center);
+        List<BasicBlock> list = null;
+        if(reversed) {
+            list = getConnectedBlocksInOut(center, PortType.IN);
+        } else {
+            list = getConnectedBlocksInOut(center, PortType.OUT);
+        }
+        for (BasicBlock block: list) {
+            if (listConnected.contains(block)) {
+                tree.addAll(reorderTreeBlocks(listConnected, block, reversed));
+            }
+        }
+        return tree;
+    }
+
+    /**
+     * Get the depth of the tree.
+     *
+     * @param listConnected
+     *            the list of blocks
+     * @param start
+     *            the root block
+     * @param reversed
+     *            true if it is a reversed tree
+     * @return
+     */
+    private static int getDepth(List<BasicBlock> listConnected, BasicBlock start, boolean reversed) {
+        List<BasicBlock> list = null;
+        if(reversed) {
+            list = getConnectedBlocksInOut(start, PortType.IN);
+        } else {
+            list = getConnectedBlocksInOut(start, PortType.OUT);
+        }
+        int d = 0;
+        int[] depth = new int[list.size()];
+        boolean leaf = true;
+        for (int i = 0; i < list.size(); i++) {
+            BasicBlock block = list.get(i);
+            if (listConnected.contains(block)) {
+                depth[i] = getDepth(listConnected, block, reversed);
+                leaf = false;
+            }
+        }
+        if (leaf) {
+            return 1;
+        }
+        for (int tmp : depth) {
+            if (tmp > d) {
+                d = tmp;
+            }
+        }
+        return d + 1;
+    }
+
+    /**
+     * Get the max width of the tree.
+     *
+     * @param listConnected
+     *            the list of blocks
+     * @param start
+     *            the root block
+     * @param reversed
+     *            true if it is a reversed tree
+     * @return
+     */
+    private static int getMaxWidth(List<BasicBlock> listConnected, BasicBlock start, boolean reversed) {
+        int depth = getDepth(listConnected, start, reversed);
+        int maxWidth = 0;
+        int width;
+        for (int i = 1; i <= depth; i++) {
+            width = getWidth(listConnected, start, i, reversed);
+            if (width > maxWidth) {
+                maxWidth = width;
+            }
+        }
+        return maxWidth;
+    }
+
+    /**
+     * Get the width of the tree in given level.
+     *
+     * @param listConnected
+     *            the list of blocks
+     * @param start
+     *            the root block
+     * @param level
+     *            the level
+     * @param reversed
+     *            true if it is a reversed tree
+     * @return
+     */
+    private static int getWidth(List<BasicBlock> listConnected, BasicBlock start, int level, boolean reversed) {
+        if (start == null) {
+            return 0;
+        }
+        if (level == 1) {
+            return 1;
+        } else if (level > 1) {
+            int width = 0;
+            List<BasicBlock> list = null;
+            if(reversed) {
+                list = getConnectedBlocksInOut(start, PortType.IN);
+            } else {
+                list = getConnectedBlocksInOut(start, PortType.OUT);
+            }
+            for (int i = 0; i < list.size(); i++) {
+                BasicBlock block = list.get(i);
+                if (listConnected.contains(block)) {
+                    width += getWidth(listConnected, block, level - 1, reversed);
+                }
+            }
+            return width;
+        }
+        return 0;
+    }
+
+    /**
+     * Move the children of the root to a new position according to their width and depth.
+     *
+     * @param listTree
+     *            the list of tree
+     * @param root
+     *            the root block
+     * @param graph
+     */
+    private static void moveChildrenBlocks(List<BasicBlock> listTree, BasicBlock root, XcosDiagram graph) {
+        int blocksDistance = (XcosOptions.getEdition().getGraphBlockDistance() <= 0) ? DEFAULT_BEAUTY_BLOCKS_DISTANCE
+                : XcosOptions.getEdition().getGraphBlockDistance();
+        int blockSize = 40;
+
+        mxGeometry rootGeo = root.getGeometry();
+        double xRoot = rootGeo.getCenterX();
+        double yRoot = rootGeo.getCenterY();
+
+        List<BasicBlock> listSubroot = getTreeBlockChildren(listTree, root);
+        if (listSubroot.size() == 0) {
+            return;
+        }
+        // int depth = getDepth(listTree, root, false);
+        int width = getMaxWidth(listTree, root, false);
+        int[] w = new int[listSubroot.size()];
+        int[] d = new int[listSubroot.size()];
+        mxPoint[] newPos = new mxPoint[listSubroot.size()];
+
+        double yWidth = width * blockSize + (width - 1) * blocksDistance;
+        double y = yRoot - yWidth / 2;
+
+        // get the depth and max width of every child.
+        for (int i = 0; i < w.length; i++) {
+            d[i] = getDepth(listTree, listSubroot.get(i), false);
+            w[i] = getMaxWidth(listTree, listSubroot.get(i), false);
+        }
+
+        // move every child to a new position according to its depth and max width.
+        for (int i = 0; i < w.length; i++) {
+            // move subroot block
+            newPos[i] = new mxPoint();
+            newPos[i].setX(xRoot + rootGeo.getWidth() / 2 + blocksDistance * listSubroot.size());
+            newPos[i].setY(y + (w[i] * blockSize + (w[i] - 1) * blocksDistance) / 2);
+            y = y + (w[i] * blockSize + (w[i] - 1) * blocksDistance) + blocksDistance;
+            moveBlock(listSubroot.get(i), newPos[i], graph);
+        }
+
+        // move the children of every child.
+        for (int i = 0; i < w.length; i++) {
+            moveChildrenBlocks(listTree, listSubroot.get(i), graph);
+        }
     }
 
     /**
@@ -1255,7 +1588,9 @@ public abstract class NormalBlockAutoPositionUtils {
         listExclude.add(sameBlock); // target block
         for (BasicBlock block : listBlocks) {
             listExclude.add(block.getChildAt(0)); // port in block
-            listExclude.add(block.getChildAt(0).getEdgeAt(0)); // link
+            if (block.getChildAt(0).getEdgeCount() > 0) {
+                listExclude.add(block.getChildAt(0).getEdgeAt(0)); // link
+            }
             listExclude.add(getConnectedPort(block, (BasicPort) block.getChildAt(0))); // target port
         }
         Object[] allObstacles = util.getAllOtherCells(all, listExclude.toArray());
@@ -1278,6 +1613,9 @@ public abstract class NormalBlockAutoPositionUtils {
 
             // TODO: Is it necessary to change the link to straight?
             // update the link.
+            if (listBlocks.get(i).getChildAt(0).getEdgeCount() == 0) {
+                continue;
+            }
             BasicLink link = (BasicLink) listBlocks.get(i).getChildAt(0).getEdgeAt(0);
             reset(graph, link);
             graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", new BasicLink[] { link });
@@ -1330,6 +1668,9 @@ public abstract class NormalBlockAutoPositionUtils {
      */
     private static void changeSingleStartEndBlockPosition(BasicBlock block, Object[] all, XcosDiagram graph) {
         BasicPort port = (BasicPort) block.getChildAt(0);
+        if (port.getEdgeCount() == 0) {
+            return;
+        }
         BasicLink link = (BasicLink) port.getEdgeAt(0);
         if (link == null) {
             // if the port is not connected,
@@ -1531,6 +1872,9 @@ public abstract class NormalBlockAutoPositionUtils {
      * @return a block which connects to the port in the block
      */
     private static BasicBlock getConnectedBlock(BasicBlock block, BasicPort port) {
+        if (port.getEdgeCount() == 0) {
+            return null;
+        }
         BasicPort otherPort = getConnectedPort(block, port);
         if (otherPort == null) {
             return null;
@@ -1549,6 +1893,9 @@ public abstract class NormalBlockAutoPositionUtils {
      */
     private static BasicPort getConnectedPort(BasicBlock block, BasicPort port) {
         mxICell cell = null;
+        if (port.getEdgeCount() == 0) {
+            return null;
+        }
         mxICell edge = port.getEdgeAt(0);
         if (edge != null && edge instanceof mxCell) {
             cell = ((mxCell) edge).getTarget();
@@ -1652,6 +1999,9 @@ public abstract class NormalBlockAutoPositionUtils {
      */
     private static void resetLink(BasicBlock block, XcosDiagram graph) {
         for (int i = 0; i < block.getChildCount(); i++) {
+            if (block.getChildAt(i) == null || block.getChildAt(i).getEdgeCount() == 0) {
+                continue;
+            }
             BasicLink link = (BasicLink) block.getChildAt(i).getEdgeAt(0);
             reset(graph, link);
             graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", new BasicLink[] { link });
